@@ -39,17 +39,10 @@ Hệ thống bao gồm các bảng chính:
 ### 1. Clone repository
 ```bash
 $ git clone https://github.com/iuh-application-development/portfolio_management.git
-$ cd pm_project
 ```
-### 2. Cài đặt môi trường ảo
+### 2. Cài đặt App
 ```bash
-$ python -m venv venv
-$ source venv/bin/activate  # Trên Linux/macOS
-$ venv\Scripts\activate    # Trên Windows
-```
-### 3. Cài đặt dependencies
-```bash
-$ pip install -r requirements.txt
+$ ./run.bat
 ```
 ### 4. Cấu hình PostgreSQL
 Cập nhật file `.env` với thông tin database:
@@ -59,14 +52,6 @@ DATABASE_USER=your_db_user
 DATABASE_PASSWORD=your_db_password
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
-```
-### 5. Chạy migration
-```bash
-$ python manage.py migrate
-```
-### 6. Chạy server
-```bash
-$ python manage.py runserver
 ```
 Hệ thống sẽ chạy tại `http://127.0.0.1:8000/`.
 
