@@ -1,0 +1,103 @@
+{% extends 'portfolio/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'portfolio_list' %}">Danh mục đầu tư</a></li>
+            <li class="breadcrumb-item active">{{ title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-primary text-white p-4 border-0">
+                    <h4 class="mb-0">
+                        {% if form.instance.pk %}
+                        <i class="fas fa-edit me-2"></i>Chỉnh sửa danh mục đầu tư
+                        {% else %}
+                        <i class="fas fa-folder-plus me-2"></i>Tạo danh mục đầu tư mới
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            {{ form.name|as_crispy_field }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description|as_crispy_field }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.investment_goal|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.target_value|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.risk_tolerance|as_crispy_field }}
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{% url 'portfolio_list' %}" class="btn btn-light">
+                                <i class="fas fa-times me-2"></i>Hủy bỏ
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if form.instance.pk %}Cập nhật{% else %}Tạo mới{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-light p-4 border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Hướng dẫn
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Tên danh mục</h6>
+                        <p class="text-muted small">Đặt tên ngắn gọn và dễ nhớ cho danh mục của bạn.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Mục tiêu đầu tư</h6>
+                        <p class="text-muted small">Xác định rõ mục tiêu đầu tư như tăng trưởng dài hạn, thu nhập cổ tức...</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Giá trị mục tiêu</h6>
+                        <p class="text-muted small">Số tiền mục tiêu bạn muốn đạt được với danh mục này.</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="fw-bold">Mức độ rủi ro</h6>
+                        <ul class="text-muted small mb-0">
+                            <li>Thấp: Ưu tiên bảo toàn vốn</li>
+                            <li>Trung bình: Cân bằng giữa rủi ro và lợi nhuận</li>
+                            <li>Cao: Chấp nhận rủi ro để tìm kiếm lợi nhuận cao</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

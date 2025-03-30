@@ -1,0 +1,202 @@
+{% extends 'portfolio/base.html' %}
+
+{% block title %}{{ portfolio.name }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'portfolio_list' %}">Danh mục đầu tư</a></li>
+            <li class="breadcrumb-item active">{{ portfolio.name }}</li>
+        </ol>
+    </nav>
+
+    <!-- Thông tin tổng quan -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="mb-0">{{ portfolio.name }}</h3>
+                        <div class="dropdown">
+                            <button class="btn btn-light rounded-pill" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'portfolio_update' pk=portfolio.pk %}">
+                                        <i class="fas fa-edit me-2 text-warning"></i>Chỉnh sửa
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'buy_stock' portfolio_id=portfolio.pk %}">
+                                        <i class="fas fa-plus me-2 text-success"></i>Mua cổ phiếu
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'sell_stock' portfolio_id=portfolio.pk %}">
+                                        <i class="fas fa-minus me-2 text-danger"></i>Bán cổ phiếu
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="card bg-light border-0">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Tổng giá trị</h6>
+                                    <h4 class="mb-0">{{ total_current_value|floatformat:0 }} VNĐ</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light border-0">
+                                <div class="card-body">
+                                    <h6 class="text-muted mb-2">Lãi/Lỗ</h6>
+                                    <h4 class="mb-0 {% if total_profit_loss > 0 %}text-success{% elif total_profit_loss < 0 %}text-danger{% endif %}">
+                                        {{ total_profit_loss|floatformat:0 }} VNĐ
+                                        ({{ profit_percentage|floatformat:2 }}%)
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">Thông tin danh mục</h5>
+                    <div class="mb-3">
+                        <small class="text-muted">Mục tiêu đầu tư</small>
+                        <p class="mb-0">{{ portfolio.investment_goal }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Mức độ rủi ro</small>
+                        <p class="mb-0">
+                            <span class="badge bg-{% if portfolio.risk_tolerance == 'high' %}danger{% elif portfolio.risk_tolerance == 'medium' %}warning{% else %}success{% endif %}">
+                                {{ portfolio.get_risk_tolerance_display }}
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <small class="text-muted">Ngày tạo</small>
+                        <p class="mb-0">{{ portfolio.created_at|date:"d/m/Y" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Danh sách tài sản -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-transparent p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Danh sách tài sản</h5>
+                <a href="{% url 'buy_stock' portfolio_id=portfolio.pk %}" class="btn btn-primary btn-sm rounded-pill">
+                    <i class="fas fa-plus me-2"></i>Thêm tài sản
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Mã CP</th>
+                            <th>Tên</th>
+                            <th class="text-end">Số lượng</th>
+                            <th class="text-end">Giá TB</th>
+                            <th class="text-end">Giá hiện tại</th>
+                            <th class="text-end">Tổng giá trị</th>
+                            <th class="text-end">Lãi/Lỗ</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pa in portfolio_assets %}
+                        <tr>
+                            <td>{{ pa.asset.symbol }}</td>
+                            <td>{{ pa.asset.name }}</td>
+                            <td class="text-end">{{ pa.quantity }}</td>
+                            <td class="text-end">{{ pa.average_price|floatformat:0 }}</td>
+                            <td class="text-end">{{ pa.asset.current_price|floatformat:0 }}</td>
+                            <td class="text-end">{{ pa.current_value|floatformat:0 }}</td>
+                            <td class="text-end {% if pa.profit_loss > 0 %}text-success{% elif pa.profit_loss < 0 %}text-danger{% endif %}">
+                                {{ pa.profit_loss|floatformat:0 }}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'sell_stock' portfolio_id=portfolio.pk %}" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-minus"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <p class="text-muted mb-0">Chưa có tài sản nào trong danh mục</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Giao dịch gần đây -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-transparent p-4 border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Giao dịch gần đây</h5>
+                <a href="{% url 'portfolio_transactions' portfolio_id=portfolio.pk %}" class="btn btn-link btn-sm">
+                    Xem tất cả
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Mã CP</th>
+                            <th>Loại GD</th>
+                            <th class="text-end">Số lượng</th>
+                            <th class="text-end">Giá</th>
+                            <th class="text-end">Tổng tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in recent_transactions %}
+                        <tr>
+                            <td>{{ transaction.transaction_date|date:"d/m/Y H:i" }}</td>
+                            <td>{{ transaction.asset.symbol }}</td>
+                            <td>
+                                <span class="badge bg-{% if transaction.transaction_type == 'buy' %}success{% else %}danger{% endif %}">
+                                    {{ transaction.get_transaction_type_display }}
+                                </span>
+                            </td>
+                            <td class="text-end">{{ transaction.quantity }}</td>
+                            <td class="text-end">{{ transaction.price|floatformat:0 }}</td>
+                            <td class="text-end">{{ transaction.total_amount|floatformat:0 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <p class="text-muted mb-0">Chưa có giao dịch nào</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
