@@ -83,6 +83,11 @@
                             <i class="fas fa-exchange-alt me-1"></i> Giao dịch
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/market/' in request.path %}active{% endif %}" href="{% url 'market' %}">
+                            <i class="fas fa-chart-line me-1"></i> Thị trường
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">

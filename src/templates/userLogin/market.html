@@ -1,0 +1,239 @@
+{% extends "userLogin/base_sidebar.html" %}
+
+{% load static %}
+{% load humanize %}
+
+{% block title %}Thị trường - Portfolio Management{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'userLogin/css/market.css' %}">
+{% endblock %}
+
+{% block main-content %}
+<main class="market-content">
+    <div class="search-container">
+        <input type="text" id="stockSearch" placeholder="Tìm kiếm cổ phiếu..." class="stock-search">
+    </div>
+    <div class="table-container">
+        <table style="width:100%">
+            <thead>
+                <tr>
+                    <th rowspan="2">CK</th>
+                    <th rowspan="2">Trần</th>
+                    <th rowspan="2">Sàn</th>
+                    <th rowspan="2">TC</th>
+                    <th colspan="2">Khớp lệnh</th>
+                </tr>
+                <tr>
+                    <th>Giá</th>
+                    <th>Khối lượng</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+    
+    <!-- Chart Modal -->
+    <div id="chartModal" class="chart-modal">
+        <div class="chart-modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="chartTitle">Biểu đồ giá cổ phiếu <span id="stockSymbol"></span></h2>
+            <div id="chart-container" class="chart-container"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const price_board = JSON.parse('{{ price_board_json|escapejs }}');
+        if (price_board){
+            const table = document.querySelector(".table-container table");
+            
+            const data = price_board.data
+            const columns = price_board.columns
+
+            let symbol_index = null
+            let ceiling_index = null
+            let floor_index = null
+            let ref_price_index = null
+            let match_vol_index = null
+            let match_price_index = null
+
+            for (var i = 0; i < columns.length; i++) {
+                if (columns[i][1] == "symbol"){
+                    symbol_index = i;
+                }
+                else if (columns[i][1] == "ceiling"){
+                    ceiling_index = i;
+                }
+                else if (columns[i][1] == "floor"){
+                    floor_index = i;
+                }
+                else if (columns[i][1] == "ref_price"){
+                    ref_price_index = i;
+                }
+                else if (columns[i][1] == "match_vol"){
+                    match_vol_index = i;
+                }
+                else if (columns[i][1] == "match_price"){
+                    match_price_index = i;
+                }
+            }
+
+            const table_body = document.createElement("tbody");
+            
+            // Format functions
+            function formatPrice(price) {
+                return parseFloat(price/1000).toFixed(2);
+            }
+            
+            function formatVolume(volume) {
+                return parseFloat(volume).toLocaleString('en-US');
+            }
+            
+            let table_body_content = "<tbody>";
+            for (var i=0; i<data.length; i++){
+                if (data[i][symbol_index]){
+                    table_body_content += "<tr title='Click để xem biểu đồ giá'>";
+                    table_body_content += `<td>${data[i][symbol_index]}</td>`;
+                    table_body_content += `<td>${formatPrice(data[i][ceiling_index])}</td>`;
+                    table_body_content += `<td>${formatPrice(data[i][floor_index])}</td>`;
+                    table_body_content += `<td>${formatPrice(data[i][ref_price_index])}</td>`;
+                    table_body_content += `<td>${formatPrice(data[i][match_price_index])}</td>`;
+                    table_body_content += `<td>${formatVolume(data[i][match_vol_index])}</td>`;
+                    table_body_content += "</tr>";
+                }
+            }
+            table_body_content += "</tbody>";
+            table_body.innerHTML = table_body_content;
+            table.appendChild(table_body);
+            
+            // Add search functionality
+            const searchInput = document.getElementById('stockSearch');
+            searchInput.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+                const searchText = this.value;
+                const rows = table.querySelectorAll('tbody tr');
+                
+                rows.forEach(row => {
+                    const stockSymbol = row.cells[0].textContent;
+                    if (stockSymbol.toUpperCase().includes(searchText)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+            
+            // Add click event to stock symbols to show chart
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                row.addEventListener('click', function() {
+                    const stockSymbol = this.cells[0].textContent;
+                    showChart(stockSymbol);
+                });
+                
+                row.style.cursor = 'pointer';
+            });
+        }
+
+        // -------------- Chart Modal Functionality
+        const modal = document.getElementById("chartModal");
+        const closeBtn = document.querySelector(".close-modal");
+        
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+            if (typeof chart !== 'undefined' && chart !== null) {
+                chart.remove();
+                chart = null;
+                candleSeries = null;
+            }
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+                if (typeof chart !== 'undefined' && chart !== null) {
+                    chart.remove();
+                    chart = null;
+                    candleSeries = null;
+                }
+            }
+        }
+        
+        let chart = null;
+        let candleSeries = null;
+        
+        function showChart(stockCode) {
+            document.getElementById('stockSymbol').textContent = stockCode;
+            modal.style.display = "block";
+            
+            createChart();
+            loadChartData(stockCode);
+        }
+        
+        function createChart() {
+            const chartContainer = document.getElementById('chart-container');
+            chartContainer.innerHTML = '';
+            
+            chart = LightweightCharts.createChart(chartContainer, {
+                width: chartContainer.clientWidth,
+                layout: { backgroundColor: '#FFFFFF', textColor: 'black' },
+                grid: { vertLines: { color: '#E0E3EB' }, horzLines: { color: '#E0E3EB' } },
+                timeScale: { timeVisible: true, secondsVisible: false },
+                rightPriceScale: {
+                    borderColor: '#D6DCDE',
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                },
+            });
+            
+            window.addEventListener('resize', function() {
+                if (chart) {
+                    chart.applyOptions({
+                        width: chartContainer.clientWidth
+                    });
+                }
+            });
+            
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a', 
+                downColor: '#ef5350', 
+                borderVisible: false,
+                wickUpColor: '#26a69a', 
+                wickDownColor: '#ef5350'
+            });
+        }
+        
+        function loadChartData(stockCode) {
+            axios.get(`/api/historical-data/${stockCode}`)
+                .then(response => {
+                    const apiData = response.data;
+                    if (apiData && apiData.data && Array.isArray(apiData.data)) {
+                        const chartData = apiData.data.map(item => ({
+                            time: Math.floor(new Date(item.time).getTime() / 1000),
+                            open: parseFloat(item.open),
+                            high: parseFloat(item.high),
+                            low: parseFloat(item.low),
+                            close: parseFloat(item.close)
+                        }));
+                        
+                        if (candleSeries) {
+                            candleSeries.setData(chartData);
+                        }
+                    } else {
+                        console.error("Invalid data format from API");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching chart data:", error);
+                    document.getElementById('chart-container').innerHTML = 
+                        '<div class="error-message">Không thể tải dữ liệu biểu đồ. Vui lòng thử lại sau.</div>';
+                });
+        }
+    });
+</script>
+
+<script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+{% endblock %} 

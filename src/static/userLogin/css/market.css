@@ -1,0 +1,153 @@
+.market-content {
+    padding: 20px;
+    background-color: #f8f9fa;
+    min-height: calc(100vh - 60px);
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.search-container {
+    margin-bottom: 20px;
+}
+
+.stock-search {
+    width: 100%;
+    max-width: 300px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.stock-search:focus {
+    border-color: #007bff;
+}
+
+.table-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    padding: 12px;
+    text-align: right;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.3s ease;
+}
+
+th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+/* Màu sắc cho các loại giá */
+.price-ceiling {
+    color: #7b1fa2 !important; /* Tím */
+    font-weight: bold;
+}
+
+.price-floor {
+    color: #1976d2 !important; /* Xanh dương */
+    font-weight: bold;
+}
+
+.price-reference {
+    color: #ffa000 !important; /* Vàng đậm */
+    font-weight: bold;
+}
+
+.price-up {
+    color: #2e7d32 !important; /* Xanh lá */
+    font-weight: bold;
+}
+
+.price-down {
+    color: #c62828 !important; /* Đỏ */
+    font-weight: bold;
+}
+
+/* Chart Modal Styles */
+.chart-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.chart-modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 20px;
+    width: 80%;
+    max-width: 1200px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    position: relative;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.close-modal {
+    position: absolute;
+    right: 20px;
+    top: 10px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #666;
+    cursor: pointer;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.chart-container {
+    width: 100%;
+    height: 500px;
+    margin-top: 20px;
+}
+
+.error-message {
+    color: #dc3545;
+    text-align: center;
+    padding: 20px;
+    font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .chart-modal-content {
+        width: 95%;
+        margin: 10% auto;
+    }
+    
+    .chart-container {
+        height: 400px;
+    }
+    
+    th, td {
+        padding: 8px;
+        font-size: 14px;
+    }
+} 
