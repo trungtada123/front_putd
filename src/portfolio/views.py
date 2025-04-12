@@ -12,6 +12,12 @@ from django.http import JsonResponse
 from .vnstock_services import get_price_board, get_historical_data
 import json
 
+# Import các view cho ví điện tử
+from .views_wallet import (
+    wallet, deposit_money, withdraw_money, bank_account_list,
+    add_bank_account, update_bank_account, delete_bank_account, set_default_bank_account
+)
+
 def home(request):
     return render(request, 'portfolio/home.html')
 
@@ -349,5 +355,5 @@ def get_stock_historical_data(request, symbol):
         return JsonResponse(chart_data, safe=False)
     except Exception as e:
         print(f"Error getting data for {symbol}: {str(e)}") # Debug log
-        print(f"Data structure: {historical_data.head()}")  # Debug log để xem cấu trúc dữ liệu
-        return JsonResponse({'error': str(e)}, status=500) 
+        print(f"Data structure: {historical_data.head()}") if 'historical_data' in locals() else print("No data fetched") # Debug log để xem cấu trúc dữ liệu
+        return JsonResponse({'error': str(e)}, status=500)

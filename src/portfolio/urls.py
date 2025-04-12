@@ -26,4 +26,14 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('market/', views.market, name='market'),
     path('api/historical-data/<str:symbol>/', views.get_stock_historical_data, name='get_stock_historical_data'),
-] 
+    
+    # URLs mới cho ví điện tử
+    path('wallet/', views.wallet, name='wallet'),
+    path('wallet/deposit/', views.deposit_money, name='deposit_money'),
+    path('wallet/withdraw/', views.withdraw_money, name='withdraw_money'),
+    path('wallet/bank-accounts/', views.bank_account_list, name='bank_account_list'),
+    path('wallet/bank-accounts/add/', views.add_bank_account, name='add_bank_account'),
+    path('wallet/bank-accounts/<int:pk>/update/', views.update_bank_account, name='update_bank_account'),
+    path('wallet/bank-accounts/<int:pk>/delete/', views.delete_bank_account, name='delete_bank_account'),
+    path('wallet/bank-accounts/<int:pk>/set-default/', views.set_default_bank_account, name='set_default_bank_account'),
+]

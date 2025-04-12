@@ -1,0 +1,360 @@
+{% extends 'portfolio/base.html' %}
+
+{% block title %}Ví điện tử | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div class="card-heading mb-3 mb-md-0">
+            <div class="card-heading-icon">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <h2 class="fw-bold mb-0">Ví điện tử</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'deposit_money' %}" class="btn btn-success btn-rounded" data-aos="fade-left" data-aos-delay="100">
+                <i class="fas fa-plus-circle me-2"></i>Nạp tiền
+            </a>
+            <a href="{% url 'withdraw_money' %}" class="btn btn-primary btn-rounded" data-aos="fade-left" data-aos-delay="200">
+                <i class="fas fa-minus-circle me-2"></i>Rút tiền
+            </a>
+        </div>
+    </div>
+
+    <!-- Thẻ số dư -->
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-gradient-primary text-white">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-circle bg-white text-primary me-3">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <h5 class="mb-0">Số dư hiện tại</h5>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-0">{{ wallet.balance|default:"0"|floatformat:0 }} VNĐ</h2>
+                    <p class="mt-2 mb-0 opacity-75">Cập nhật lúc: {{ wallet.last_updated|date:"H:i d/m/Y"|default:"--" }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-circle bg-success-light text-success me-3">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <h5 class="mb-0">Tổng nạp</h5>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-0">{{ total_deposit|default:"0"|floatformat:0 }} VNĐ</h2>
+                    <p class="text-muted mt-2 mb-0">Trong 30 ngày qua: {{ monthly_deposit|default:"0"|floatformat:0 }} VNĐ</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="300">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-circle bg-danger-light text-danger me-3">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <h5 class="mb-0">Tổng rút</h5>
+                    </div>
+                    <h2 class="display-6 fw-bold mb-0">{{ total_withdraw|default:"0"|floatformat:0 }} VNĐ</h2>
+                    <p class="text-muted mt-2 mb-0">Trong 30 ngày qua: {{ monthly_withdraw|default:"0"|floatformat:0 }} VNĐ</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tài khoản ngân hàng liên kết -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4" data-aos="fade-up">
+        <div class="card-header bg-transparent border-0 p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="card-heading">
+                    <div class="card-heading-icon">
+                        <i class="fas fa-university"></i>
+                    </div>
+                    <h5 class="mb-0">Tài khoản ngân hàng liên kết</h5>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm btn-rounded" data-bs-toggle="modal" data-bs-target="#addBankModal">
+                    <i class="fas fa-plus me-1"></i> Thêm tài khoản
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if bank_accounts %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Ngân hàng</th>
+                            <th>Chủ tài khoản</th>
+                            <th>Số tài khoản</th>
+                            <th>Chi nhánh</th>
+                            <th class="text-center">Mặc định</th>
+                            <th class="text-end pe-4">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in bank_accounts %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bank-logo me-3">
+                                        {% if account.bank_logo %}
+                                        <img src="{{ account.bank_logo }}" alt="{{ account.bank_name }}" width="40" height="40" class="rounded">
+                                        {% else %}
+                                        <div class="icon-circle">
+                                            <i class="fas fa-university text-primary"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ account.bank_name }}</h6>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ account.account_name }}</td>
+                            <td class="text-monospace fw-medium">{{ account.account_number }}</td>
+                            <td>{{ account.branch|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if account.is_default %}
+                                <span class="badge bg-success rounded-pill">Mặc định</span>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-light" title="Đặt làm mặc định">
+                                    <i class="far fa-star"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-light" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light text-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <img src="https://cdn-icons-png.flaticon.com/512/2830/2830284.png" alt="No bank accounts" class="img-fluid mb-4" style="max-width: 150px; opacity: 0.7;">
+                <h5>Chưa có tài khoản ngân hàng nào</h5>
+                <p class="text-muted">Thêm tài khoản ngân hàng để thuận tiện cho việc nạp/rút tiền</p>
+                <button type="button" class="btn btn-primary btn-rounded px-4 mt-2" data-bs-toggle="modal" data-bs-target="#addBankModal">
+                    <i class="fas fa-plus me-2"></i>Thêm tài khoản ngân hàng
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Lịch sử giao dịch -->
+    <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up" data-aos-delay="100">
+        <div class="card-header bg-transparent border-0 p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="card-heading">
+                    <div class="card-heading-icon">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <h5 class="mb-0">Lịch sử giao dịch</h5>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-light active">Tất cả</button>
+                        <button type="button" class="btn btn-sm btn-light">Nạp tiền</button>
+                        <button type="button" class="btn btn-sm btn-light">Rút tiền</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Ngày</th>
+                            <th>Loại</th>
+                            <th>Số tiền</th>
+                            <th>Phương thức</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end pe-4">Mã giao dịch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td class="ps-4">{{ transaction.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="icon-circle {% if transaction.type == 'deposit' %}bg-success-light text-success{% else %}bg-danger-light text-danger{% endif %} me-2" style="width: 32px; height: 32px;">
+                                        <i class="fas {% if transaction.type == 'deposit' %}fa-arrow-down{% else %}fa-arrow-up{% endif %}"></i>
+                                    </div>
+                                    <span>{{ transaction.get_type_display }}</span>
+                                </div>
+                            </td>
+                            <td class="fw-medium {% if transaction.type == 'deposit' %}text-success{% else %}text-danger{% endif %}">
+                                {% if transaction.type == 'deposit' %}+{% else %}-{% endif %}{{ transaction.amount|floatformat:0 }} VNĐ
+                            </td>
+                            <td>{{ transaction.payment_method }}</td>
+                            <td>
+                                <span class="badge {% if transaction.status == 'completed' %}bg-success{% elif transaction.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %} rounded-pill">
+                                    {{ transaction.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <span class="text-monospace small">{{ transaction.transaction_id }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if transactions.has_other_pages %}
+            <div class="d-flex justify-content-center py-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination mb-0">
+                        {% if transactions.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ transactions.previous_page_number }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for i in transactions.paginator.page_range %}
+                        <li class="page-item {% if transactions.number == i %}active{% endif %}">
+                            <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if transactions.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ transactions.next_page_number }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" alt="No transactions" class="img-fluid mb-4" style="max-width: 150px; opacity: 0.7;">
+                <h5>Chưa có giao dịch nào</h5>
+                <p class="text-muted">Các giao dịch nạp/rút tiền sẽ được hiển thị tại đây</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal thêm tài khoản ngân hàng -->
+<div class="modal fade" id="addBankModal" tabindex="-1" aria-labelledby="addBankModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="addBankModalLabel">Thêm tài khoản ngân hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addBankForm">
+                    <div class="mb-3">
+                        <label for="bankName" class="form-label">Ngân hàng</label>
+                        <select class="form-select" id="bankName" required>
+                            <option value="">-- Chọn ngân hàng --</option>
+                            <option value="vietcombank">Vietcombank</option>
+                            <option value="techcombank">Techcombank</option>
+                            <option value="bidv">BIDV</option>
+                            <option value="vietinbank">Vietinbank</option>
+                            <option value="mbbank">MB Bank</option>
+                            <option value="tpbank">TPBank</option>
+                            <option value="acb">ACB</option>
+                            <option value="sacombank">Sacombank</option>
+                            <option value="vpbank">VPBank</option>
+                            <option value="other">Ngân hàng khác</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3 d-none" id="otherBankGroup">
+                        <label for="otherBankName" class="form-label">Tên ngân hàng</label>
+                        <input type="text" class="form-control" id="otherBankName" placeholder="Nhập tên ngân hàng">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountName" class="form-label">Chủ tài khoản</label>
+                        <input type="text" class="form-control" id="accountName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="accountNumber" class="form-label">Số tài khoản</label>
+                        <input type="text" class="form-control" id="accountNumber" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="branch" class="form-label">Chi nhánh</label>
+                        <input type="text" class="form-control" id="branch">
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="defaultAccount">
+                        <label class="form-check-label" for="defaultAccount">
+                            Đặt làm tài khoản mặc định
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="btn btn-primary">Thêm tài khoản</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    }
+    
+    .bg-success-light {
+        background-color: rgba(16, 185, 129, 0.1);
+    }
+    
+    .bg-danger-light {
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+    
+    .text-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hiển thị input tên ngân hàng khác khi chọn "Ngân hàng khác"
+        const bankSelect = document.getElementById('bankName');
+        const otherBankGroup = document.getElementById('otherBankGroup');
+        
+        bankSelect.addEventListener('change', function() {
+            if (this.value === 'other') {
+                otherBankGroup.classList.remove('d-none');
+            } else {
+                otherBankGroup.classList.add('d-none');
+            }
+        });
+    });
+</script>
+{% endblock %}

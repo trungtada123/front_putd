@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="container py-5">
-    <nav aria-label="breadcrumb" class="mb-4">
+    <nav aria-label="breadcrumb" class="mb-4" data-aos="fade-right">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
             <li class="breadcrumb-item"><a href="{% url 'portfolio_list' %}">Danh mục đầu tư</a></li>
@@ -15,46 +15,100 @@
 
     <div class="row">
         <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-primary text-white p-4 border-0">
-                    <h4 class="mb-0">
-                        {% if form.instance.pk %}
-                        <i class="fas fa-edit me-2"></i>Chỉnh sửa danh mục đầu tư
-                        {% else %}
-                        <i class="fas fa-folder-plus me-2"></i>Tạo danh mục đầu tư mới
-                        {% endif %}
-                    </h4>
+            <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up">
+                <div class="card-header border-0 p-4">
+                    <div class="card-heading">
+                        <div class="card-heading-icon">
+                            {% if form.instance.pk %}
+                            <i class="fas fa-edit"></i>
+                            {% else %}
+                            <i class="fas fa-folder-plus"></i>
+                            {% endif %}
+                        </div>
+                        <h4 class="mb-0">
+                            {% if form.instance.pk %}
+                            Chỉnh sửa danh mục đầu tư
+                            {% else %}
+                            Tạo danh mục đầu tư mới
+                            {% endif %}
+                        </h4>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     <form method="post" novalidate>
                         {% csrf_token %}
                         
-                        <div class="mb-3">
-                            {{ form.name|as_crispy_field }}
+                        <div class="mb-4">
+                            <div class="form-floating">
+                                <input type="text" name="name" class="form-control" id="id_name" placeholder="Tên danh mục" value="{{ form.name.value|default:'' }}" required>
+                                <label for="id_name">Tên danh mục <span class="text-danger">*</span></label>
+                            </div>
+                            {% if form.name.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.name.errors %}{{ error }}{% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.description|as_crispy_field }}
+                        <div class="mb-4">
+                            <div class="form-floating">
+                                <textarea name="description" class="form-control" id="id_description" placeholder="Mô tả" style="height: 100px;">{{ form.description.value|default:'' }}</textarea>
+                                <label for="id_description">Mô tả</label>
+                            </div>
+                            {% if form.description.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.description.errors %}{{ error }}{% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                {{ form.investment_goal|as_crispy_field }}
+                            <div class="col-md-6 mb-4">
+                                <div class="form-floating">
+                                    <input type="text" name="investment_goal" class="form-control" id="id_investment_goal" placeholder="Mục tiêu đầu tư" value="{{ form.investment_goal.value|default:'' }}">
+                                    <label for="id_investment_goal">Mục tiêu đầu tư</label>
+                                </div>
+                                {% if form.investment_goal.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.investment_goal.errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
-                            <div class="col-md-6 mb-3">
-                                {{ form.target_value|as_crispy_field }}
+                            <div class="col-md-6 mb-4">
+                                <div class="form-floating">
+                                    <input type="number" name="target_value" class="form-control" id="id_target_value" placeholder="Giá trị mục tiêu" value="{{ form.target_value.value|default:'' }}">
+                                    <label for="id_target_value">Giá trị mục tiêu (VNĐ)</label>
+                                </div>
+                                {% if form.target_value.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.target_value.errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            {{ form.risk_tolerance|as_crispy_field }}
+                        <div class="mb-4">
+                            <div class="form-floating">
+                                <select name="risk_tolerance" class="form-select" id="id_risk_tolerance">
+                                    <option value="">-- Chọn mức độ rủi ro --</option>
+                                    <option value="low" {% if form.risk_tolerance.value == 'low' %}selected{% endif %}>Thấp</option>
+                                    <option value="medium" {% if form.risk_tolerance.value == 'medium' %}selected{% endif %}>Trung bình</option>
+                                    <option value="high" {% if form.risk_tolerance.value == 'high' %}selected{% endif %}>Cao</option>
+                                </select>
+                                <label for="id_risk_tolerance">Mức độ rủi ro <span class="text-danger">*</span></label>
+                            </div>
+                            {% if form.risk_tolerance.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.risk_tolerance.errors %}{{ error }}{% endfor %}
+                            </div>
+                            {% endif %}
                         </div>
                         
                         <div class="d-flex justify-content-end gap-2">
-                            <a href="{% url 'portfolio_list' %}" class="btn btn-light">
+                            <a href="{% url 'portfolio_list' %}" class="btn btn-light btn-rounded">
                                 <i class="fas fa-times me-2"></i>Hủy bỏ
                             </a>
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary btn-rounded">
                                 <i class="fas fa-save me-2"></i>
                                 {% if form.instance.pk %}Cập nhật{% else %}Tạo mới{% endif %}
                             </button>
@@ -65,11 +119,14 @@
         </div>
         
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-light p-4 border-0">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2 text-primary"></i>Hướng dẫn
-                    </h5>
+            <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="card-header bg-primary-light p-4 border-0">
+                    <div class="card-heading">
+                        <div class="card-heading-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <h5 class="mb-0">Hướng dẫn</h5>
+                    </div>
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-4">
@@ -87,17 +144,51 @@
                         <p class="text-muted small">Số tiền mục tiêu bạn muốn đạt được với danh mục này.</p>
                     </div>
                     
-                    <div class="mb-4">
+                    <div class="mb-0">
                         <h6 class="fw-bold">Mức độ rủi ro</h6>
-                        <ul class="text-muted small mb-0">
-                            <li>Thấp: Ưu tiên bảo toàn vốn</li>
-                            <li>Trung bình: Cân bằng giữa rủi ro và lợi nhuận</li>
-                            <li>Cao: Chấp nhận rủi ro để tìm kiếm lợi nhuận cao</li>
+                        <ul class="text-muted small mb-0 ps-3">
+                            <li class="mb-2"><span class="badge bg-success rounded-pill me-1">Thấp</span> Ưu tiên bảo toàn vốn</li>
+                            <li class="mb-2"><span class="badge bg-warning rounded-pill me-1">Trung bình</span> Cân bằng giữa rủi ro và lợi nhuận</li>
+                            <li class="mb-0"><span class="badge bg-danger rounded-pill me-1">Cao</span> Chấp nhận rủi ro để tìm kiếm lợi nhuận cao</li>
                         </ul>
                     </div>
                 </div>
             </div>
+            
+            {% if form.instance.pk %}
+            <div class="card border-0 shadow-sm rounded-4 mt-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="icon-circle me-3">
+                            <i class="fas fa-chart-line text-primary"></i>
+                        </div>
+                        <h5 class="mb-0">Tóm tắt danh mục</h5>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Ngày tạo</small>
+                        <p class="mb-0">{{ form.instance.created_at|date:"d/m/Y" }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Số tài sản</small>
+                        <p class="mb-0">{{ form.instance.assets.count|default:"0" }}</p>
+                    </div>
+                    
+                    <div>
+                        <small class="text-muted d-block">Tổng giá trị hiện tại</small>
+                        <p class="mb-0 fw-bold">{{ form.instance.total_value|default:"0"|floatformat:0 }} VNĐ</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
-{% endblock %} 
+
+<style>
+    .bg-primary-light {
+        background-color: var(--primary-light);
+    }
+</style>
+{% endblock %}

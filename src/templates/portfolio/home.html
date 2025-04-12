@@ -1,29 +1,186 @@
 {% extends 'portfolio/base.html' %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row align-items-center">
-        <div class="col-lg-6">
-            <h1 class="display-4 fw-bold mb-4">Quản lý danh mục đầu tư chứng khoán</h1>
-            <p class="lead mb-4">Theo dõi và quản lý danh mục đầu tư của bạn một cách chuyên nghiệp</p>
-            {% if user.is_authenticated %}
-            <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg rounded-pill">
-                <i class="fas fa-chart-line me-2"></i>Xem danh mục của bạn
-            </a>
-            {% else %}
-            <div class="d-flex gap-3">
-                <a href="{% url 'register' %}" class="btn btn-primary btn-lg rounded-pill">
-                    <i class="fas fa-user-plus me-2"></i>Đăng ký ngay
-                </a>
-                <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg rounded-pill">
-                    <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập
-                </a>
+<div class="container-fluid px-0">
+    <!-- Hero Section -->
+    <div class="position-relative bg-primary text-white mb-5">
+        <div class="container py-5">
+            <div class="row py-5 align-items-center">
+                <div class="col-lg-6" data-aos="fade-right">
+                    <h1 class="display-4 fw-bold mb-4">Quản lý đầu tư chứng khoán thông minh</h1>
+                    <p class="lead mb-4 pe-lg-5">Theo dõi, phân tích và quản lý danh mục đầu tư của bạn với công cụ trực quan, toàn diện và dễ sử dụng.</p>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg btn-rounded text-primary">
+                        <i class="fas fa-chart-line me-2"></i>Xem danh mục của bạn
+                    </a>
+                    {% else %}
+                    <div class="d-flex gap-3">
+                        <a href="{% url 'register' %}" class="btn btn-light btn-lg btn-rounded text-primary">
+                            <i class="fas fa-user-plus me-2"></i>Đăng ký ngay
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg btn-rounded">
+                            <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="col-lg-6 mt-5 mt-lg-0" data-aos="fade-left">
+                    <img src="https://cdn-icons-png.flaticon.com/512/2037/2037338.png" alt="Stock Portfolio" class="img-fluid">
+                </div>
             </div>
-            {% endif %}
         </div>
-        <div class="col-lg-6">
-            <img src="https://cdn-icons-png.flaticon.com/512/2037/2037338.png" alt="Stock Portfolio" class="img-fluid">
+        
+        <!-- Wave Separator -->
+        <div class="position-absolute bottom-0 left-0 w-100 overflow-hidden" style="transform: translateY(1px);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" preserveAspectRatio="none" style="width: 100%; height: 60px;">
+                <path fill="#f9fafb" fill-opacity="1" d="M0,224L60,208C120,192,240,160,360,138.7C480,117,600,107,720,122.7C840,139,960,181,1080,192C1200,203,1320,181,1380,170.7L1440,160L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+            </svg>
+        </div>
+    </div>
+    
+    <!-- Features Section -->
+    <div class="container py-5">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="fw-bold mb-3">Tính năng nổi bật</h2>
+            <p class="text-muted col-lg-8 mx-auto">Hệ thống quản lý danh mục đầu tư StockPortfolio cung cấp đầy đủ công cụ để bạn theo dõi và tối ưu hóa đầu tư của mình.</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="card border-0 shadow-sm h-100 hover-lift rounded-4">
+                    <div class="card-body p-4 text-center">
+                        <div class="icon-circle mx-auto mb-3 bg-primary-light text-primary" style="width: 60px; height: 60px;">
+                            <i class="fas fa-chart-pie fa-lg"></i>
+                        </div>
+                        <h5 class="card-title mb-3">Quản lý danh mục</h5>
+                        <p class="text-muted">Tạo và quản lý nhiều danh mục đầu tư với các mục tiêu và chiến lược khác nhau.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="card border-0 shadow-sm h-100 hover-lift rounded-4">
+                    <div class="card-body p-4 text-center">
+                        <div class="icon-circle mx-auto mb-3 bg-primary-light text-primary" style="width: 60px; height: 60px;">
+                            <i class="fas fa-chart-line fa-lg"></i>
+                        </div>
+                        <h5 class="card-title mb-3">Theo dõi hiệu suất</h5>
+                        <p class="text-muted">Giám sát hiệu suất từng cổ phiếu và toàn bộ danh mục theo thời gian thực.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="card border-0 shadow-sm h-100 hover-lift rounded-4">
+                    <div class="card-body p-4 text-center">
+                        <div class="icon-circle mx-auto mb-3 bg-primary-light text-primary" style="width: 60px; height: 60px;">
+                            <i class="fas fa-exchange-alt fa-lg"></i>
+                        </div>
+                        <h5 class="card-title mb-3">Quản lý giao dịch</h5>
+                        <p class="text-muted">Ghi lại tất cả giao dịch mua, bán và theo dõi lịch sử chi tiết.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="card border-0 shadow-sm h-100 hover-lift rounded-4">
+                    <div class="card-body p-4 text-center">
+                        <div class="icon-circle mx-auto mb-3 bg-primary-light text-primary" style="width: 60px; height: 60px;">
+                            <i class="fas fa-chart-bar fa-lg"></i>
+                        </div>
+                        <h5 class="card-title mb-3">Phân tích thị trường</h5>
+                        <p class="text-muted">Xem thông tin thị trường và biểu đồ giá cổ phiếu để đưa ra quyết định đầu tư tốt nhất.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- How It Works -->
+    <div class="bg-light py-5 mt-5">
+        <div class="container py-4">
+            <div class="text-center mb-5" data-aos="fade-up">
+                <h2 class="fw-bold mb-3">Cách thức hoạt động</h2>
+                <p class="text-muted col-lg-8 mx-auto">Chỉ với vài bước đơn giản để bắt đầu quản lý danh mục đầu tư của bạn</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4 text-center">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 50px; height: 50px;">
+                                <span class="fw-bold">1</span>
+                            </div>
+                            <h5 class="mb-3">Tạo tài khoản</h5>
+                            <p class="text-muted mb-0">Đăng ký tài khoản miễn phí và bắt đầu thiết lập hồ sơ đầu tư của bạn</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4 text-center">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 50px; height: 50px;">
+                                <span class="fw-bold">2</span>
+                            </div>
+                            <h5 class="mb-3">Tạo danh mục đầu tư</h5>
+                            <p class="text-muted mb-0">Thiết lập các danh mục đầu tư với mục tiêu và mức độ rủi ro phù hợp</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4 text-center">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-4" style="width: 50px; height: 50px;">
+                                <span class="fw-bold">3</span>
+                            </div>
+                            <h5 class="mb-3">Theo dõi và tối ưu hóa</h5>
+                            <p class="text-muted mb-0">Giám sát hiệu suất và điều chỉnh danh mục đầu tư của bạn theo thời gian</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- CTA Section -->
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card border-0 shadow-lg rounded-5 bg-primary text-white overflow-hidden" data-aos="fade-up">
+                    <div class="row g-0">
+                        <div class="col-md-6">
+                            <div class="card-body p-5">
+                                <h2 class="fw-bold mb-4">Bắt đầu quản lý danh mục đầu tư của bạn ngay hôm nay</h2>
+                                <p class="mb-4">Tham gia cùng hàng nghìn nhà đầu tư đang sử dụng StockPortfolio để theo dõi và tối ưu hóa hiệu suất đầu tư của họ.</p>
+                                {% if user.is_authenticated %}
+                                <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg btn-rounded text-primary">
+                                    <i class="fas fa-chart-line me-2"></i>Đi đến bảng điều khiển
+                                </a>
+                                {% else %}
+                                <a href="{% url 'register' %}" class="btn btn-light btn-lg btn-rounded text-primary">
+                                    <i class="fas fa-user-plus me-2"></i>Đăng ký miễn phí
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6 d-none d-md-block">
+                            <img src="https://cdn-icons-png.flaticon.com/512/4146/4146005.png" alt="Investment" class="img-fluid h-100 object-fit-cover" style="clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%);">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %} 
+
+<style>
+    .bg-primary-light {
+        background-color: var(--primary-light);
+    }
+    .object-fit-cover {
+        object-fit: cover;
+    }
+</style>
+{% endblock %}

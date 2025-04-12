@@ -1,0 +1,451 @@
+{% extends 'portfolio/base.html' %}
+
+{% block title %}Nạp tiền | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4" data-aos="fade-right">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'wallet' %}">Ví điện tử</a></li>
+            <li class="breadcrumb-item active">Nạp tiền</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 mb-4" data-aos="fade-up">
+                <div class="card-header border-0 p-4">
+                    <div class="card-heading">
+                        <div class="card-heading-icon">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <h4 class="mb-0">Nạp tiền vào tài khoản</h4>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="depositForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="amount" class="form-label">Số tiền muốn nạp <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" name="amount" class="form-control form-control-lg" id="amount" min="50000" step="50000" required>
+                                <span class="input-group-text">VNĐ</span>
+                            </div>
+                            <div class="form-text">Số tiền tối thiểu: 50,000 VNĐ</div>
+                        </div>
+                        
+                        <h5 class="mb-3">Chọn phương thức nạp tiền</h5>
+                        
+                        <div class="payment-methods mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="form-check payment-method-card">
+                                        <input class="form-check-input" type="radio" name="paymentMethod" id="bankTransfer" value="bank_transfer" checked>
+                                        <label class="form-check-label w-100" for="bankTransfer">
+                                            <div class="card border shadow-sm rounded-4 p-3 text-center">
+                                                <div class="mb-2">
+                                                    <i class="fas fa-university fa-2x text-primary"></i>
+                                                </div>
+                                                <h6 class="mb-0">Chuyển khoản ngân hàng</h6>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check payment-method-card">
+                                        <input class="form-check-input" type="radio" name="paymentMethod" id="momo" value="momo">
+                                        <label class="form-check-label w-100" for="momo">
+                                            <div class="card border shadow-sm rounded-4 p-3 text-center">
+                                                <div class="mb-2">
+                                                    <i class="fas fa-wallet fa-2x text-danger"></i>
+                                                </div>
+                                                <h6 class="mb-0">Ví MoMo</h6>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-check payment-method-card">
+                                        <input class="form-check-input" type="radio" name="paymentMethod" id="vnpay" value="vnpay">
+                                        <label class="form-check-label w-100" for="vnpay">
+                                            <div class="card border shadow-sm rounded-4 p-3 text-center">
+                                                <div class="mb-2">
+                                                    <i class="fas fa-credit-card fa-2x text-success"></i>
+                                                </div>
+                                                <h6 class="mb-0">VNPay</h6>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Phần chuyển khoản ngân hàng -->
+                        <div id="bankTransferSection">
+                            <h5 class="mb-3">Chọn tài khoản ngân hàng</h5>
+                            
+                            {% if bank_accounts %}
+                            <div class="mb-4">
+                                <div class="row g-3">
+                                    {% for account in bank_accounts %}
+                                    <div class="col-md-6">
+                                        <div class="form-check bank-account-card">
+                                            <input class="form-check-input" type="radio" name="bankAccount" id="bank{{ account.id }}" value="{{ account.id }}" {% if account.is_default %}checked{% endif %}>
+                                            <label class="form-check-label w-100" for="bank{{ account.id }}">
+                                                <div class="card border shadow-sm rounded-4 p-3">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="bank-logo me-3">
+                                                            {% if account.bank_logo %}
+                                                            <img src="{{ account.bank_logo }}" alt="{{ account.bank_name }}" width="40" height="40" class="rounded">
+                                                            {% else %}
+                                                            <div class="icon-circle">
+                                                                <i class="fas fa-university text-primary"></i>
+                                                            </div>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div>
+                                                            <h6 class="mb-1">{{ account.bank_name }}</h6>
+                                                            <div class="text-monospace small">{{ account.account_number }}</div>
+                                                            <div class="small text-muted">{{ account.account_name }}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-check bank-account-card">
+                                            <input class="form-check-input" type="radio" name="bankAccount" id="newBankAccount" value="new">
+                                            <label class="form-check-label w-100" for="newBankAccount">
+                                                <div class="card border border-dashed shadow-sm rounded-4 p-3 text-center">
+                                                    <div class="py-2">
+                                                        <i class="fas fa-plus-circle fa-2x text-primary mb-2"></i>
+                                                        <h6 class="mb-0">Thêm tài khoản mới</h6>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info rounded-4 mb-4">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        <i class="fas fa-info-circle fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="alert-heading">Chưa có tài khoản ngân hàng</h6>
+                                        <p class="mb-0">Vui lòng thêm thông tin tài khoản ngân hàng để tiếp tục nạp tiền.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Form thêm tài khoản ngân hàng -->
+                            <div id="newBankAccountForm">
+                                <div class="card border shadow-sm rounded-4 p-3 mb-4">
+                                    <h6 class="mb-3">Thông tin tài khoản ngân hàng</h6>
+                                    
+                                    <div class="mb-3">
+                                        <label for="bankName" class="form-label">Ngân hàng <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="bankName" name="bankName" required>
+                                            <option value="">-- Chọn ngân hàng --</option>
+                                            <option value="vietcombank">Vietcombank</option>
+                                            <option value="techcombank">Techcombank</option>
+                                            <option value="bidv">BIDV</option>
+                                            <option value="vietinbank">Vietinbank</option>
+                                            <option value="mbbank">MB Bank</option>
+                                            <option value="tpbank">TPBank</option>
+                                            <option value="acb">ACB</option>
+                                            <option value="sacombank">Sacombank</option>
+                                            <option value="vpbank">VPBank</option>
+                                            <option value="other">Ngân hàng khác</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="mb-3 d-none" id="otherBankGroup">
+                                        <label for="otherBankName" class="form-label">Tên ngân hàng <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="otherBankName" name="otherBankName" placeholder="Nhập tên ngân hàng">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="accountName" class="form-label">Chủ tài khoản <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="accountName" name="accountName" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="accountNumber" class="form-label">Số tài khoản <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="accountNumber" name="accountNumber" required>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="branch" class="form-label">Chi nhánh</label>
+                                        <input type="text" class="form-control" id="branch" name="branch">
+                                    </div>
+                                    
+                                    <div class="form-check mb-0">
+                                        <input class="form-check-input" type="checkbox" id="defaultAccount" name="defaultAccount" checked>
+                                        <label class="form-check-label" for="defaultAccount">
+                                            Đặt làm tài khoản mặc định
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Phần MoMo -->
+                        <div id="momoSection" class="d-none">
+                            <div class="card border shadow-sm rounded-4 p-4 text-center mb-4">
+                                <div class="mb-3">
+                                    <img src="https://cdn-icons-png.flaticon.com/512/5525/5525967.png" alt="Momo QR Code" style="max-width: 200px;">
+                                </div>
+                                <h5>Quét mã QR để thanh toán</h5>
+                                <p class="text-muted">Sử dụng ứng dụng MoMo để quét mã QR và chuyển khoản số tiền <span class="amount-display fw-bold">0</span> VNĐ</p>
+                                <div class="d-flex justify-content-center">
+                                    <div class="alert alert-warning w-75">
+                                        <small class="d-block text-center">
+                                            <i class="fas fa-exclamation-triangle me-1"></i> 
+                                            Vui lòng ghi rõ nội dung chuyển khoản: <span class="fw-bold text-monospace">NAP {{ user.username }}</span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Phần VNPay -->
+                        <div id="vnpaySection" class="d-none">
+                            <div class="alert alert-info rounded-4 mb-4">
+                                <div class="d-flex">
+                                    <div class="me-3">
+                                        <i class="fas fa-info-circle fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="alert-heading">Thanh toán qua VNPay</h6>
+                                        <p class="mb-0">Bạn sẽ được chuyển đến cổng thanh toán VNPay sau khi nhấn nút "Tiếp tục".</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card border shadow-sm rounded-4 p-4 mb-4">
+                                <h6 class="mb-3">Thông tin thanh toán</h6>
+                                <div class="mb-3">
+                                    <label for="fullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="fullName" name="fullName" required>
+                                </div>
+                                <div class="mb-0">
+                                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                            <label class="form-check-label" for="agreeTerms">
+                                Tôi đồng ý với <a href="#" class="text-primary">điều khoản nạp tiền</a> của StockPortfolio
+                            </label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg btn-rounded">
+                                <i class="fas fa-check-circle me-2"></i>Tiếp tục
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 mb-4 sticky-lg-top" style="top: 100px;" data-aos="fade-up" data-aos-delay="100">
+                <div class="card-header bg-primary-light p-4 border-0">
+                    <div class="card-heading">
+                        <div class="card-heading-icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <h5 class="mb-0">Thông tin giao dịch</h5>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Số tiền nạp:</span>
+                            <span class="fw-bold amount-display">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Phí giao dịch:</span>
+                            <span class="fw-bold text-success">Miễn phí</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Tổng thanh toán:</span>
+                            <span class="fw-bold amount-display">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success rounded-4 mb-0">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="small">
+                                <strong>Giao dịch an toàn & bảo mật</strong>
+                                <p class="mb-0">Thông tin thanh toán của bạn được bảo vệ an toàn bởi giao thức mã hóa và các tiêu chuẩn bảo mật.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card-body p-4">
+                    <h5 class="mb-3">Câu hỏi thường gặp</h5>
+                    
+                    <div class="accordion" id="faqAccordion">
+                        <div class="accordion-item border-0 mb-3">
+                            <h2 class="accordion-header" id="headingOne">
+                                <button class="accordion-button collapsed bg-light rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                                    Bao lâu tiền được cập nhật vào tài khoản?
+                                </button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body pt-0">
+                                    <p class="text-muted small mb-0">Đối với thanh toán qua VNPay và MoMo, tiền sẽ được cập nhật ngay lập tức. Đối với chuyển khoản ngân hàng, thời gian xử lý từ 5-15 phút trong giờ hành chính.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item border-0 mb-3">
+                            <h2 class="accordion-header" id="headingTwo">
+                                <button class="accordion-button collapsed bg-light rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    Có phí giao dịch không?
+                                </button>
+                            </h2>
+                            <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body pt-0">
+                                    <p class="text-muted small mb-0">Chúng tôi không thu phí cho việc nạp tiền vào tài khoản StockPortfolio. Tuy nhiên, ngân hàng hoặc ví điện tử của bạn có thể áp dụng phí chuyển khoản.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header" id="headingThree">
+                                <button class="accordion-button collapsed bg-light rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    Tôi có thể nạp tối đa bao nhiêu tiền?
+                                </button>
+                            </h2>
+                            <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                                <div class="accordion-body pt-0">
+                                    <p class="text-muted small mb-0">Số tiền nạp tối thiểu là 50,000 VNĐ và tối đa là 100,000,000 VNĐ cho mỗi lần giao dịch. Nếu bạn cần nạp nhiều hơn, vui lòng liên hệ với bộ phận hỗ trợ khách hàng.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-primary-light {
+        background-color: var(--primary-light);
+    }
+    
+    .text-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    
+    .form-check-input:checked ~ .form-check-label .card {
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 1px var(--primary-color) !important;
+    }
+    
+    .payment-method-card .form-check-input,
+    .bank-account-card .form-check-input {
+        position: absolute;
+        opacity: 0;
+    }
+    
+    .bank-account-card .card,
+    .payment-method-card .card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .bank-account-card .card:hover,
+    .payment-method-card .card:hover {
+        border-color: var(--primary-color);
+    }
+    
+    .border-dashed {
+        border-style: dashed !important;
+    }
+    
+    .sticky-lg-top {
+        z-index: 99;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hiển thị input tên ngân hàng khác khi chọn "Ngân hàng khác"
+        const bankSelect = document.getElementById('bankName');
+        const otherBankGroup = document.getElementById('otherBankGroup');
+        
+        if (bankSelect) {
+            bankSelect.addEventListener('change', function() {
+                if (this.value === 'other') {
+                    otherBankGroup.classList.remove('d-none');
+                } else {
+                    otherBankGroup.classList.add('d-none');
+                }
+            });
+        }
+        
+        // Hiển thị phương thức thanh toán tương ứng
+        const paymentMethods = document.querySelectorAll('input[name="paymentMethod"]');
+        const bankTransferSection = document.getElementById('bankTransferSection');
+        const momoSection = document.getElementById('momoSection');
+        const vnpaySection = document.getElementById('vnpaySection');
+        
+        paymentMethods.forEach(method => {
+            method.addEventListener('change', function() {
+                // Ẩn tất cả các phương thức
+                bankTransferSection.classList.add('d-none');
+                momoSection.classList.add('d-none');
+                vnpaySection.classList.add('d-none');
+                
+                // Hiển thị phương thức được chọn
+                if (this.value === 'bank_transfer') {
+                    bankTransferSection.classList.remove('d-none');
+                } else if (this.value === 'momo') {
+                    momoSection.classList.remove('d-none');
+                } else if (this.value === 'vnpay') {
+                    vnpaySection.classList.remove('d-none');
+                }
+            });
+        });
+        
+        // Cập nhật hiển thị số tiền
+        const amountInput = document.getElementById('amount');
+        const amountDisplays = document.querySelectorAll('.amount-display');
+        
+        if (amountInput) {
+            amountInput.addEventListener('input', function() {
+                const amount = this.value ? parseInt(this.value).toLocaleString('vi-VN') : '0';
+                
+                amountDisplays.forEach(display => {
+                    display.textContent = amount;
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
