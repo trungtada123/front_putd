@@ -1,6 +1,11 @@
 {% extends 'portfolio/base.html' %}
+{% load static %}
 
 {% block title %}Rút tiền | {{ block.super }}{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'portfolio/js/wallet.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -280,91 +285,4 @@
         </div>
     </div>
 </div>
-
-<style>
-    .bg-primary-light {
-        background-color: var(--primary-light);
-    }
-    
-    .text-monospace {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-    
-    .form-check-input:checked ~ .form-check-label .card {
-        border-color: var(--primary-color) !important;
-        box-shadow: 0 0 0 1px var(--primary-color) !important;
-    }
-    
-    .bank-account-card .form-check-input {
-        position: absolute;
-        opacity: 0;
-    }
-    
-    .bank-account-card .card {
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .bank-account-card .card:hover {
-        border-color: var(--primary-color);
-    }
-    
-    .border-dashed {
-        border-style: dashed !important;
-    }
-    
-    .sticky-lg-top {
-        z-index: 99;
-    }
-</style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Hiển thị input tên ngân hàng khác khi chọn "Ngân hàng khác"
-        const bankSelect = document.getElementById('bankName');
-        const otherBankGroup = document.getElementById('otherBankGroup');
-        
-        if (bankSelect) {
-            bankSelect.addEventListener('change', function() {
-                if (this.value === 'other') {
-                    otherBankGroup.classList.remove('d-none');
-                } else {
-                    otherBankGroup.classList.add('d-none');
-                }
-            });
-        }
-        
-        // Tính phí và cập nhật hiển thị số tiền
-        const amountInput = document.getElementById('amount');
-        const amountDisplays = document.querySelectorAll('.amount-display');
-        const feeDisplay = document.querySelector('.fee-display');
-        const totalAmountDisplay = document.querySelector('.total-amount-display');
-        
-        if (amountInput && feeDisplay && totalAmountDisplay) {
-            amountInput.addEventListener('input', function() {
-                // Xử lý số tiền rút
-                const amount = this.value ? parseInt(this.value) : 0;
-                const formattedAmount = amount.toLocaleString('vi-VN') + ' VNĐ';
-                
-                // Tính phí rút tiền (0.5%, tối thiểu 10,000, tối đa 50,000)
-                let fee = Math.round(amount * 0.005);
-                if (fee < 10000) fee = amount > 0 ? 10000 : 0;
-                if (fee > 50000) fee = 50000;
-                
-                const formattedFee = fee.toLocaleString('vi-VN') + ' VNĐ';
-                
-                // Tính tổng số tiền nhận
-                const totalAmount = amount - fee;
-                const formattedTotalAmount = totalAmount > 0 ? totalAmount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ';
-                
-                // Cập nhật hiển thị
-                amountDisplays.forEach(display => {
-                    display.textContent = formattedAmount;
-                });
-                feeDisplay.textContent = formattedFee;
-                totalAmountDisplay.textContent = formattedTotalAmount;
-            });
-        }
-    });
-</script>
 {% endblock %}

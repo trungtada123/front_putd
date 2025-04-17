@@ -1,7 +1,12 @@
 {% extends 'portfolio/base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}{{ title }} | {{ block.super }}{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'portfolio/js/wallet.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -119,20 +124,4 @@
         </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Hiển thị input tên ngân hàng khác khi chọn "Ngân hàng khác"
-        const bankSelect = document.getElementById('id_bank_name');
-        const otherBankGroup = document.getElementById('otherBankGroup');
-        
-        bankSelect.addEventListener('change', function() {
-            if (this.value === 'other') {
-                otherBankGroup.classList.remove('d-none');
-            } else {
-                otherBankGroup.classList.add('d-none');
-            }
-        });
-    });
-</script>
 {% endblock %}

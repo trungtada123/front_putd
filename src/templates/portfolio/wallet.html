@@ -1,6 +1,16 @@
 {% extends 'portfolio/base.html' %}
 
+{% load static %}
+
 {% block title %}Ví điện tử | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table td, .table th {
+        vertical-align: middle;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -272,22 +282,4 @@
         </div>
     </div>
 </div>
-
-<style>
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    }
-    
-    .bg-success-light {
-        background-color: rgba(16, 185, 129, 0.1);
-    }
-    
-    .bg-danger-light {
-        background-color: rgba(239, 68, 68, 0.1);
-    }
-    
-    .text-monospace {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-</style>
 {% endblock %}

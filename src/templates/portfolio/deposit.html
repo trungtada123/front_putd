@@ -1,6 +1,11 @@
 {% extends 'portfolio/base.html' %}
+{% load static %}
 
 {% block title %}Nạp tiền | {{ block.super }}{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'portfolio/js/wallet.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -338,100 +343,4 @@
         </div>
     </div>
 </div>
-
-<style>
-    .bg-primary-light {
-        background-color: var(--primary-light);
-    }
-    
-    .text-monospace {
-        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-    
-    .form-check-input:checked ~ .form-check-label .card {
-        border-color: var(--primary-color) !important;
-        box-shadow: 0 0 0 1px var(--primary-color) !important;
-    }
-    
-    .payment-method-card .form-check-input,
-    .bank-account-card .form-check-input {
-        position: absolute;
-        opacity: 0;
-    }
-    
-    .bank-account-card .card,
-    .payment-method-card .card {
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .bank-account-card .card:hover,
-    .payment-method-card .card:hover {
-        border-color: var(--primary-color);
-    }
-    
-    .border-dashed {
-        border-style: dashed !important;
-    }
-    
-    .sticky-lg-top {
-        z-index: 99;
-    }
-</style>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Hiển thị input tên ngân hàng khác khi chọn "Ngân hàng khác"
-        const bankSelect = document.getElementById('bankName');
-        const otherBankGroup = document.getElementById('otherBankGroup');
-        
-        if (bankSelect) {
-            bankSelect.addEventListener('change', function() {
-                if (this.value === 'other') {
-                    otherBankGroup.classList.remove('d-none');
-                } else {
-                    otherBankGroup.classList.add('d-none');
-                }
-            });
-        }
-        
-        // Hiển thị phương thức thanh toán tương ứng
-        const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
-        const bankTransferSection = document.getElementById('bankTransferSection');
-        const momoSection = document.getElementById('momoSection');
-        const vnpaySection = document.getElementById('vnpaySection');
-        
-        paymentMethods.forEach(method => {
-            method.addEventListener('change', function() {
-                // Ẩn tất cả các phương thức
-                bankTransferSection.classList.add('d-none');
-                momoSection.classList.add('d-none');
-                vnpaySection.classList.add('d-none');
-                
-                // Hiển thị phương thức được chọn
-                if (this.value === 'bank_transfer') {
-                    bankTransferSection.classList.remove('d-none');
-                } else if (this.value === 'momo') {
-                    momoSection.classList.remove('d-none');
-                } else if (this.value === 'vnpay') {
-                    vnpaySection.classList.remove('d-none');
-                }
-            });
-        });
-        
-        // Cập nhật hiển thị số tiền
-        const amountInput = document.getElementById('amount');
-        const amountDisplays = document.querySelectorAll('.amount-display');
-        
-        if (amountInput) {
-            amountInput.addEventListener('input', function() {
-                const amount = this.value ? parseInt(this.value).toLocaleString('vi-VN') : '0';
-                
-                amountDisplays.forEach(display => {
-                    display.textContent = amount;
-                });
-            });
-        }
-    });
-</script>
 {% endblock %}
