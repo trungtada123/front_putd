@@ -295,4 +295,145 @@
         right: 5%;
         left: 5%;
     }
+}
+
+/* Common Elements */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+.navbar-nav .nav-link.active {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-heading {
+    display: flex;
+    align-items: center;
+}
+
+.card-heading-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+}
+
+/* Background & Text Colors */
+.bg-primary-light {
+    background-color: var(--primary-light);
+}
+
+.bg-success-light {
+    background-color: rgba(16, 185, 129, 0.1);
+}
+
+.bg-danger-light {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.bg-warning-light {
+    background-color: rgba(245, 158, 11, 0.1);
+}
+
+.text-monospace {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* UI Components */
+.border-dashed {
+    border-style: dashed !important;
+}
+
+.hover-lift {
+    transition: transform 0.2s ease-in-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+}
+
+.btn-rounded {
+    border-radius: 50rem;
+}
+
+.rounded-4 {
+    border-radius: 0.5rem;
+}
+
+.rounded-5 {
+    border-radius: 1rem;
+}
+
+.object-fit-cover {
+    object-fit: cover;
+}
+
+/* Wallet & Banking */
+.payment-method-card input[type="radio"],
+.bank-account-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.payment-method-card input[type="radio"]:checked + label .card,
+.bank-account-card input[type="radio"]:checked + label .card {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 1px var(--primary-color) !important;
+    background-color: var(--primary-light);
+}
+
+/* Chat AI */
+.chat-container {
+    height: 500px;
+    overflow-y: auto;
+}
+
+.chat-message {
+    max-width: 75%;
+    margin-bottom: 1rem;
+}
+
+.chat-message.user {
+    margin-left: auto;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+}
+
+.chat-message.bot {
+    margin-right: auto;
+    background-color: #f8f9fa;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+    .chat-container {
+        height: 400px;
+    }
+    
+    .chat-message {
+        max-width: 85%;
+    }
 } 
