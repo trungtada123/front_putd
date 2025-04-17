@@ -1,10 +1,11 @@
 # Hệ Thống Quản Lý Danh Mục Đầu Tư
 
 - **Thành viên nhóm**
-- **Thành viên 1**: Hoa Xuân Hoàn - 22689381
+- **Thành viên 1**: Nguyễn Thị Thúy Kiều - 22733091
 - **Thành viên 2**: Đào Tiến Sang - 22705971
 - **Thành viên 3**: Nguyễn Chí Trung - 22719231
-- **Thành viên 4**: Nguyễn Trường Vương - 22642961
+- **Thành viên 4**: Kiều Trương Hàm Hương - 22642961
+
 
 ## Giới Thiệu
 Hệ thống quản lý danh mục đầu tư giúp người dùng theo dõi, mua bán tài sản tài chính và quản lý danh mục đầu tư của họ. Hệ thống cung cấp các chức năng như nạp tiền vào ví, giao dịch tài sản, theo dõi biến động thị trường, và báo cáo hiệu suất danh mục.
