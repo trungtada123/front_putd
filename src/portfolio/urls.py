@@ -1,6 +1,8 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from . import views_wallet
+import portfolio.views
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -27,13 +29,18 @@ urlpatterns = [
     path('market/', views.market, name='market'),
     path('api/historical-data/<str:symbol>/', views.get_stock_historical_data, name='get_stock_historical_data'),
     
-    # URLs mới cho ví điện tử
-    path('wallet/', views.wallet, name='wallet'),
-    path('wallet/deposit/', views.deposit_money, name='deposit_money'),
-    path('wallet/withdraw/', views.withdraw_money, name='withdraw_money'),
-    path('wallet/bank-accounts/', views.bank_account_list, name='bank_account_list'),
-    path('wallet/bank-accounts/add/', views.add_bank_account, name='add_bank_account'),
-    path('wallet/bank-accounts/<int:pk>/update/', views.update_bank_account, name='update_bank_account'),
-    path('wallet/bank-accounts/<int:pk>/delete/', views.delete_bank_account, name='delete_bank_account'),
-    path('wallet/bank-accounts/<int:pk>/set-default/', views.set_default_bank_account, name='set_default_bank_account'),
+    # URLs cho ví điện tử
+    path('wallet/', views_wallet.wallet, name='wallet'),
+    path('wallet/deposit/', views_wallet.deposit_money, name='deposit_money'),
+    path('wallet/withdraw/', views_wallet.withdraw_money, name='withdraw_money'),
+    path('wallet/transactions/', views_wallet.wallet_transactions, name='wallet_transactions'),
+    path('wallet/bank-accounts/', views_wallet.bank_account_list, name='bank_account_list'),
+    path('wallet/bank-accounts/create/', views_wallet.bank_account_create, name='bank_account_create'),
+    path('wallet/bank-accounts/<int:pk>/update/', views_wallet.update_bank_account, name='bank_account_update'),
+    path('wallet/bank-accounts/<int:pk>/delete/', views_wallet.delete_bank_account, name='bank_account_delete'),
+    path('wallet/bank-accounts/<int:pk>/set-default/', views_wallet.set_default_bank_account, name='bank_account_set_default'),
+    
+    # API URLs
+    path('api/historical-data/<str:symbol>/', views.get_historical_data_api, name='historical_data_api'),
+    path('api/ai-chat/', views.ai_chat_api, name='ai_chat_api'),
 ]

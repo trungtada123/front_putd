@@ -12,6 +12,22 @@
         </ol>
     </nav>
 
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} rounded-4 mb-4">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} fa-2x"></i>
+                    </div>
+                    <div>
+                        <h6 class="alert-heading">Thông báo</h6>
+                        <p class="mb-0">{{ message }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="row">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm rounded-4 mb-4" data-aos="fade-up">
@@ -24,8 +40,31 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post" id="withdrawForm">
+                    <form method="post" id="withdrawForm" action="{% url 'withdraw_money' %}">
                         {% csrf_token %}
+                        
+                        {% if form.errors %}
+                        <div class="alert alert-danger rounded-4 mb-4">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <i class="fas fa-exclamation-circle fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h6 class="alert-heading">Lỗi xử lý form</h6>
+                                    <ul class="mb-0">
+                                        {% for field in form %}
+                                            {% for error in field.errors %}
+                                                <li>{{ field.label }}: {{ error }}</li>
+                                            {% endfor %}
+                                        {% endfor %}
+                                        {% for error in form.non_field_errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         
                         <div class="alert alert-primary rounded-4 mb-4">
                             <div class="d-flex">
@@ -56,7 +95,7 @@
                                 {% for account in bank_accounts %}
                                 <div class="col-md-6">
                                     <div class="form-check bank-account-card">
-                                        <input class="form-check-input" type="radio" name="bankAccount" id="bank{{ account.id }}" value="{{ account.id }}" {% if account.is_default %}checked{% endif %}>
+                                        <input class="form-check-input" type="radio" name="bank_account" id="bank{{ account.id }}" value="{{ account.id }}" {% if account.is_default %}checked{% endif %}>
                                         <label class="form-check-label w-100" for="bank{{ account.id }}">
                                             <div class="card border shadow-sm rounded-4 p-3">
                                                 <div class="d-flex align-items-center">
@@ -70,7 +109,13 @@
                                                         {% endif %}
                                                     </div>
                                                     <div>
-                                                        <h6 class="mb-1">{{ account.bank_name }}</h6>
+                                                        <h6 class="mb-1">
+                                                            {% if account.bank_name == 'other' %}
+                                                                {{ account.other_bank_name }}
+                                                            {% else %}
+                                                                {{ account.get_bank_name_display }}
+                                                            {% endif %}
+                                                        </h6>
                                                         <div class="text-monospace small">{{ account.account_number }}</div>
                                                         <div class="small text-muted">{{ account.account_name }}</div>
                                                     </div>
@@ -83,14 +128,16 @@
                                 
                                 <div class="col-md-6">
                                     <div class="form-check bank-account-card">
-                                        <input class="form-check-input" type="radio" name="bankAccount" id="newBankAccount" value="new">
+                                        <input class="form-check-input" type="radio" name="bank_account" id="newBankAccount" value="new">
                                         <label class="form-check-label w-100" for="newBankAccount">
-                                            <div class="card border border-dashed shadow-sm rounded-4 p-3 text-center">
-                                                <div class="py-2">
-                                                    <i class="fas fa-plus-circle fa-2x text-primary mb-2"></i>
-                                                    <h6 class="mb-0">Thêm tài khoản mới</h6>
+                                            <a href="{% url 'bank_account_create' %}?next=withdraw" class="text-decoration-none">
+                                                <div class="card border border-dashed shadow-sm rounded-4 p-3 text-center">
+                                                    <div class="py-2">
+                                                        <i class="fas fa-plus-circle fa-2x text-primary mb-2"></i>
+                                                        <h6 class="mb-0">Thêm tài khoản mới</h6>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </a>
                                         </label>
                                     </div>
                                 </div>
@@ -110,64 +157,13 @@
                         </div>
                         {% endif %}
                         
-                        <!-- Form thêm tài khoản ngân hàng -->
-                        <div id="newBankAccountForm" class="d-none">
-                            <div class="card border shadow-sm rounded-4 p-3 mb-4">
-                                <h6 class="mb-3">Thông tin tài khoản ngân hàng</h6>
-                                
-                                <div class="mb-3">
-                                    <label for="bankName" class="form-label">Ngân hàng <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="bankName" name="bankName" required>
-                                        <option value="">-- Chọn ngân hàng --</option>
-                                        <option value="vietcombank">Vietcombank</option>
-                                        <option value="techcombank">Techcombank</option>
-                                        <option value="bidv">BIDV</option>
-                                        <option value="vietinbank">Vietinbank</option>
-                                        <option value="mbbank">MB Bank</option>
-                                        <option value="tpbank">TPBank</option>
-                                        <option value="acb">ACB</option>
-                                        <option value="sacombank">Sacombank</option>
-                                        <option value="vpbank">VPBank</option>
-                                        <option value="other">Ngân hàng khác</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="mb-3 d-none" id="otherBankGroup">
-                                    <label for="otherBankName" class="form-label">Tên ngân hàng <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="otherBankName" name="otherBankName" placeholder="Nhập tên ngân hàng">
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="accountName" class="form-label">Chủ tài khoản <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="accountName" name="accountName" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="accountNumber" class="form-label">Số tài khoản <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="accountNumber" name="accountNumber" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="branch" class="form-label">Chi nhánh</label>
-                                    <input type="text" class="form-control" id="branch" name="branch">
-                                </div>
-                                
-                                <div class="form-check mb-0">
-                                    <input class="form-check-input" type="checkbox" id="defaultAccount" name="defaultAccount" checked>
-                                    <label class="form-check-label" for="defaultAccount">
-                                        Đặt làm tài khoản mặc định
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="mb-4">
                             <label for="withdrawNote" class="form-label">Ghi chú (Không bắt buộc)</label>
-                            <textarea name="withdrawNote" id="withdrawNote" class="form-control" rows="3" placeholder="Nhập ghi chú của bạn (nếu có)"></textarea>
+                            <textarea name="notes" id="withdrawNote" class="form-control" rows="3" placeholder="Nhập ghi chú của bạn (nếu có)"></textarea>
                         </div>
                         
                         <div class="form-check mb-4">
-                            <input class="form-check-input" type="checkbox" id="agreeTerms" name="agreeTerms" required>
+                            <input class="form-check-input" type="checkbox" id="agreeTerms" name="agree_terms" required>
                             <label class="form-check-label" for="agreeTerms">
                                 Tôi đồng ý với <a href="#" class="text-primary">điều khoản rút tiền</a> của StockPortfolio
                             </label>
@@ -335,22 +331,6 @@
                 } else {
                     otherBankGroup.classList.add('d-none');
                 }
-            });
-        }
-        
-        // Hiển thị form thêm tài khoản ngân hàng mới
-        const bankOptions = document.querySelectorAll('input[name="bankAccount"]');
-        const newBankAccountForm = document.getElementById('newBankAccountForm');
-        
-        if (bankOptions.length > 0 && newBankAccountForm) {
-            bankOptions.forEach(option => {
-                option.addEventListener('change', function() {
-                    if (this.value === 'new') {
-                        newBankAccountForm.classList.remove('d-none');
-                    } else {
-                        newBankAccountForm.classList.add('d-none');
-                    }
-                });
             });
         }
         

@@ -11,12 +11,9 @@ from decimal import Decimal
 from django.http import JsonResponse
 from .vnstock_services import get_price_board, get_historical_data
 import json
-
-# Import các view cho ví điện tử
-from .views_wallet import (
-    wallet, deposit_money, withdraw_money, bank_account_list,
-    add_bank_account, update_bank_account, delete_bank_account, set_default_bank_account
-)
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .utils import get_ai_response
 
 def home(request):
     return render(request, 'portfolio/home.html')
@@ -357,3 +354,39 @@ def get_stock_historical_data(request, symbol):
         print(f"Error getting data for {symbol}: {str(e)}") # Debug log
         print(f"Data structure: {historical_data.head()}") if 'historical_data' in locals() else print("No data fetched") # Debug log để xem cấu trúc dữ liệu
         return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def ai_chat_api(request):
+    """
+    API endpoint để xử lý các yêu cầu chat với AI
+    """
+    try:
+        data = json.loads(request.body)
+        message = data.get('message', '')
+        
+        if not message:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tin nhắn không được để trống'
+            }, status=400)
+        
+        # Gọi API AI để nhận phản hồi
+        response = get_ai_response(message)
+        
+        return JsonResponse({
+            'success': True,
+            'response': response
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Dữ liệu JSON không hợp lệ'
+        }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

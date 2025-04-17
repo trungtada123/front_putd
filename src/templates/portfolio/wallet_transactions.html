@@ -1,0 +1,183 @@
+{% extends 'portfolio/base.html' %}
+
+{% block title %}Lịch sử giao dịch ví điện tử | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4" data-aos="fade-right">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'wallet' %}">Ví điện tử</a></li>
+            <li class="breadcrumb-item active">Lịch sử giao dịch</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div class="card-heading mb-3 mb-md-0">
+            <div class="card-heading-icon">
+                <i class="fas fa-history"></i>
+            </div>
+            <h2 class="fw-bold mb-0">Lịch sử giao dịch ví điện tử</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'deposit_money' %}" class="btn btn-success btn-rounded" data-aos="fade-left" data-aos-delay="100">
+                <i class="fas fa-plus-circle me-2"></i>Nạp tiền
+            </a>
+            <a href="{% url 'withdraw_money' %}" class="btn btn-primary btn-rounded" data-aos="fade-left" data-aos-delay="200">
+                <i class="fas fa-minus-circle me-2"></i>Rút tiền
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+        <div class="card-body p-4">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        <select name="type" class="form-select" id="typeSelect">
+                            <option value="">Tất cả loại</option>
+                            {% for type_code, type_name in transaction_types %}
+                                <option value="{{ type_code }}" {% if request.GET.type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="typeSelect">Loại giao dịch</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        <select name="status" class="form-select" id="statusSelect">
+                            <option value="">Tất cả trạng thái</option>
+                            {% for status_code, status_name in status_choices %}
+                                <option value="{{ status_code }}" {% if request.GET.status == status_code %}selected{% endif %}>{{ status_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="statusSelect">Trạng thái</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating">
+                        <input type="date" name="from_date" class="form-control" id="fromDate" value="{{ request.GET.from_date }}">
+                        <label for="fromDate">Từ ngày</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-floating">
+                        <input type="date" name="to_date" class="form-control" id="toDate" value="{{ request.GET.to_date }}">
+                        <label for="toDate">Đến ngày</label>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 h-100 btn-rounded">
+                        <i class="fas fa-filter me-2"></i>Lọc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up">
+        <div class="card-body p-0">
+            {% if transactions %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Ngày</th>
+                            <th>Mã giao dịch</th>
+                            <th>Loại</th>
+                            <th>Phương thức</th>
+                            <th>Số tiền</th>
+                            <th>Phí</th>
+                            <th>Thực nhận</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end pe-4">Ghi chú</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr>
+                            <td class="ps-4">{{ transaction.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="text-monospace small">{{ transaction.transaction_id }}</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if transaction.type == 'deposit' %}bg-success{% else %}bg-primary{% endif %} rounded-pill">
+                                    {{ transaction.get_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ transaction.get_payment_method_display }}</td>
+                            <td class="fw-medium">{{ transaction.amount|floatformat:0 }} VNĐ</td>
+                            <td>{{ transaction.fee|floatformat:0 }} VNĐ</td>
+                            <td class="fw-medium">{{ transaction.net_amount|floatformat:0 }} VNĐ</td>
+                            <td>
+                                <span class="badge {% if transaction.status == 'completed' %}bg-success{% elif transaction.status == 'pending' %}bg-warning{% elif transaction.status == 'cancelled' %}bg-secondary{% else %}bg-danger{% endif %} rounded-pill">
+                                    {{ transaction.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="pe-4">
+                                {% if transaction.notes %}
+                                <span class="text-muted">{{ transaction.notes|truncatechars:30 }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if transactions.has_other_pages %}
+            <div class="d-flex justify-content-center py-3">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination mb-0">
+                        {% if transactions.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ transactions.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for i in transactions.paginator.page_range %}
+                        <li class="page-item {% if transactions.number == i %}active{% endif %}">
+                            <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                        </li>
+                        {% endfor %}
+                        
+                        {% if transactions.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ transactions.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="text-center py-5">
+                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076478.png" alt="No transactions" class="img-fluid mb-4" style="max-width: 150px; opacity: 0.7;">
+                <h5>Chưa có giao dịch nào</h5>
+                <p class="text-muted">Các giao dịch nạp/rút tiền sẽ được hiển thị tại đây</p>
+                <div class="d-flex justify-content-center gap-3 mt-3">
+                    <a href="{% url 'deposit_money' %}" class="btn btn-success btn-rounded">
+                        <i class="fas fa-plus-circle me-2"></i>Nạp tiền
+                    </a>
+                    <a href="{% url 'withdraw_money' %}" class="btn btn-primary btn-rounded">
+                        <i class="fas fa-minus-circle me-2"></i>Rút tiền
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+</style>
+{% endblock %} 

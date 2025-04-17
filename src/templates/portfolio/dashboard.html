@@ -37,6 +37,18 @@
         <div class="col-md-6 col-lg-3 mb-4">
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-body">
+                    <h6 class="text-muted mb-2">Số dư ví điện tử</h6>
+                    <h3 class="mb-0">{{ wallet.balance|default:"0"|floatformat:0 }} VNĐ</h3>
+                    <div class="mt-2">
+                        <a href="{% url 'wallet' %}" class="btn btn-sm btn-outline-primary rounded-pill">Quản lý ví</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body">
                     <h6 class="text-muted mb-2">Số danh mục</h6>
                     <h3 class="mb-0">{{ portfolios.count }}</h3>
                     <small class="text-muted">Danh mục đang quản lý</small>
@@ -144,6 +156,60 @@
                 </a>
             </div>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Tiện ích ví điện tử -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="fas fa-wallet me-2 text-primary"></i>Tiện ích ví điện tử
+            </h5>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 hover-lift">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-circle bg-primary-light text-primary mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-plus-circle fa-lg"></i>
+                    </div>
+                    <h5 class="card-title mb-3">Nạp tiền</h5>
+                    <p class="text-muted mb-4">Nạp tiền vào tài khoản của bạn để thực hiện giao dịch mua cổ phiếu</p>
+                    <a href="{% url 'deposit_money' %}" class="btn btn-success btn-rounded">
+                        <i class="fas fa-plus-circle me-2"></i>Nạp tiền
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 hover-lift">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-circle bg-primary-light text-primary mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-minus-circle fa-lg"></i>
+                    </div>
+                    <h5 class="card-title mb-3">Rút tiền</h5>
+                    <p class="text-muted mb-4">Rút tiền từ tài khoản về tài khoản ngân hàng của bạn</p>
+                    <a href="{% url 'withdraw_money' %}" class="btn btn-primary btn-rounded">
+                        <i class="fas fa-minus-circle me-2"></i>Rút tiền
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 hover-lift">
+                <div class="card-body p-4 text-center">
+                    <div class="icon-circle bg-primary-light text-primary mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i class="fas fa-university fa-lg"></i>
+                    </div>
+                    <h5 class="card-title mb-3">Tài khoản ngân hàng</h5>
+                    <p class="text-muted mb-4">Quản lý các tài khoản ngân hàng liên kết với tài khoản của bạn</p>
+                    <a href="{% url 'bank_account_list' %}" class="btn btn-outline-primary btn-rounded">
+                        <i class="fas fa-university me-2"></i>Quản lý
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 

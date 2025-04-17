@@ -247,41 +247,27 @@ class DepositForm(forms.Form):
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['bank_account'].queryset = BankAccount.objects.filter(user=user).order_by('-is_default')
-        
-        # Thêm một lựa chọn để thêm tài khoản mới
-        self.fields['bank_account'].choices = list(self.fields['bank_account'].choices) + [('new', 'Thêm tài khoản mới')]
+        self.user = user
         
     def clean(self):
         cleaned_data = super().clean()
         payment_method = cleaned_data.get('payment_method')
         bank_account = cleaned_data.get('bank_account')
         
-        # Kiểm tra nếu chọn phương thức thanh toán là chuyển khoản ngân hàng
-        if payment_method == 'bank_transfer':
-            if bank_account == 'new':
-                # Kiểm tra các trường thông tin tài khoản mới
-                new_bank_name = cleaned_data.get('new_bank_name')
-                new_other_bank_name = cleaned_data.get('new_other_bank_name')
-                new_account_name = cleaned_data.get('new_account_name')
-                new_account_number = cleaned_data.get('new_account_number')
-                
-                if not new_bank_name:
-                    raise forms.ValidationError({'new_bank_name': "Vui lòng chọn ngân hàng"})
-                
-                if new_bank_name == 'other' and not new_other_bank_name:
-                    raise forms.ValidationError({'new_other_bank_name': "Vui lòng nhập tên ngân hàng"})
-                
-                if not new_account_name:
-                    raise forms.ValidationError({'new_account_name': "Vui lòng nhập tên chủ tài khoản"})
-                
-                if not new_account_number:
-                    raise forms.ValidationError({'new_account_number': "Vui lòng nhập số tài khoản"})
-                
-                if new_account_number and not new_account_number.isdigit():
-                    raise forms.ValidationError({'new_account_number': "Số tài khoản chỉ được chứa các chữ số"})
-            elif not bank_account:
-                raise forms.ValidationError({'bank_account': "Vui lòng chọn một tài khoản ngân hàng hoặc thêm mới"})
-                
+        # Nếu phương thức thanh toán là chuyển khoản ngân hàng,
+        # cần có tài khoản ngân hàng hoặc thông tin tài khoản mới
+        if payment_method == 'bank_transfer' and not bank_account:
+            # Kiểm tra xem đã nhập đủ thông tin tài khoản mới chưa
+            new_bank_name = cleaned_data.get('new_bank_name')
+            new_account_name = cleaned_data.get('new_account_name')
+            new_account_number = cleaned_data.get('new_account_number')
+            
+            if not (new_bank_name and new_account_name and new_account_number):
+                if BankAccount.objects.filter(user=self.user).exists():
+                    self.add_error('bank_account', 'Vui lòng chọn tài khoản ngân hàng')
+                else:
+                    self.add_error(None, 'Vui lòng thêm thông tin tài khoản ngân hàng')
+        
         return cleaned_data
 
 class WithdrawForm(forms.Form):
@@ -388,44 +374,25 @@ class WithdrawForm(forms.Form):
     
     def __init__(self, user, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Lấy thông tin ví để giới hạn số tiền rút tối đa
-        wallet = Wallet.objects.filter(user=user).first()
-        if wallet:
-            max_balance = wallet.balance
-            self.fields['amount'].widget.attrs['max'] = max_balance
-            
         self.fields['bank_account'].queryset = BankAccount.objects.filter(user=user).order_by('-is_default')
-        
-        # Thêm một lựa chọn để thêm tài khoản mới
-        self.fields['bank_account'].choices = list(self.fields['bank_account'].choices) + [('new', 'Thêm tài khoản mới')]
+        self.user = user
         
     def clean(self):
         cleaned_data = super().clean()
+        amount = cleaned_data.get('amount')
         bank_account = cleaned_data.get('bank_account')
         
-        # Kiểm tra nếu chọn thêm tài khoản mới
-        if bank_account == 'new':
-            # Kiểm tra các trường thông tin tài khoản mới
+        # Nếu không có tài khoản ngân hàng nào được chọn
+        if not bank_account:
+            # Kiểm tra xem đã nhập đủ thông tin tài khoản mới chưa
             new_bank_name = cleaned_data.get('new_bank_name')
-            new_other_bank_name = cleaned_data.get('new_other_bank_name')
             new_account_name = cleaned_data.get('new_account_name')
             new_account_number = cleaned_data.get('new_account_number')
             
-            if not new_bank_name:
-                raise forms.ValidationError({'new_bank_name': "Vui lòng chọn ngân hàng"})
-            
-            if new_bank_name == 'other' and not new_other_bank_name:
-                raise forms.ValidationError({'new_other_bank_name': "Vui lòng nhập tên ngân hàng"})
-            
-            if not new_account_name:
-                raise forms.ValidationError({'new_account_name': "Vui lòng nhập tên chủ tài khoản"})
-            
-            if not new_account_number:
-                raise forms.ValidationError({'new_account_number': "Vui lòng nhập số tài khoản"})
-            
-            if new_account_number and not new_account_number.isdigit():
-                raise forms.ValidationError({'new_account_number': "Số tài khoản chỉ được chứa các chữ số"})
-        elif not bank_account:
-            raise forms.ValidationError({'bank_account': "Vui lòng chọn một tài khoản ngân hàng hoặc thêm mới"})
-            
+            if not (new_bank_name and new_account_name and new_account_number):
+                if BankAccount.objects.filter(user=self.user).exists():
+                    self.add_error('bank_account', 'Vui lòng chọn tài khoản ngân hàng')
+                else:
+                    self.add_error(None, 'Vui lòng thêm thông tin tài khoản ngân hàng')
+        
         return cleaned_data

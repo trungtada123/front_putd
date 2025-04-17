@@ -1,0 +1,126 @@
+{% extends 'portfolio/base.html' %}
+
+{% block title %}Tài khoản ngân hàng | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4" data-aos="fade-right">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'wallet' %}">Ví điện tử</a></li>
+            <li class="breadcrumb-item active">Tài khoản ngân hàng</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div class="card-heading mb-3 mb-md-0">
+            <div class="card-heading-icon">
+                <i class="fas fa-university"></i>
+            </div>
+            <h2 class="fw-bold mb-0">Tài khoản ngân hàng</h2>
+        </div>
+        <a href="{% url 'bank_account_create' %}" class="btn btn-primary btn-rounded" data-aos="fade-left">
+            <i class="fas fa-plus me-2"></i>Thêm tài khoản mới
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up">
+        <div class="card-body p-0">
+            {% if bank_accounts %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Ngân hàng</th>
+                            <th>Chủ tài khoản</th>
+                            <th>Số tài khoản</th>
+                            <th>Chi nhánh</th>
+                            <th class="text-center">Mặc định</th>
+                            <th class="text-end pe-4">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in bank_accounts %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="bank-logo me-3">
+                                        {% if account.bank_logo %}
+                                        <img src="{{ account.bank_logo }}" alt="{{ account.bank_name }}" width="40" height="40" class="rounded">
+                                        {% else %}
+                                        <div class="icon-circle">
+                                            <i class="fas fa-university text-primary"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">
+                                            {% if account.bank_name == 'other' %}
+                                                {{ account.other_bank_name }}
+                                            {% else %}
+                                                {{ account.get_bank_name_display }}
+                                            {% endif %}
+                                        </h6>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ account.account_name }}</td>
+                            <td class="text-monospace fw-medium">{{ account.account_number }}</td>
+                            <td>{{ account.branch|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if account.is_default %}
+                                <span class="badge bg-success rounded-pill">Mặc định</span>
+                                {% else %}
+                                <form method="post" action="{% url 'bank_account_set_default' pk=account.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-light" title="Đặt làm mặc định">
+                                        <i class="far fa-star"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group">
+                                    <a href="{% url 'bank_account_update' pk=account.pk %}" class="btn btn-sm btn-light" title="Chỉnh sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'bank_account_delete' pk=account.pk %}" class="btn btn-sm btn-light text-danger" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <img src="https://cdn-icons-png.flaticon.com/512/2830/2830284.png" alt="No bank accounts" class="img-fluid mb-4" style="max-width: 150px; opacity: 0.7;">
+                <h5>Chưa có tài khoản ngân hàng nào</h5>
+                <p class="text-muted">Thêm tài khoản ngân hàng để thuận tiện cho việc nạp/rút tiền</p>
+                <a href="{% url 'bank_account_create' %}" class="btn btn-primary btn-rounded px-4 mt-2">
+                    <i class="fas fa-plus me-2"></i>Thêm tài khoản ngân hàng
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+    
+    .icon-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: rgba(var(--primary-rgb), 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %} 
