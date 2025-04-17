@@ -1,0 +1,127 @@
+{% extends 'portfolio/base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ title }} | {{ block.super }}{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'portfolio/js/wallet.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4" data-aos="fade-right">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'wallet' %}">Ví điện tử</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'bank_account_list' %}">Tài khoản ngân hàng</a></li>
+            <li class="breadcrumb-item active">{{ title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up">
+                <div class="card-header border-0 p-4">
+                    <div class="card-heading">
+                        <div class="card-heading-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <h4 class="mb-0">{{ title }}</h4>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="id_bank_name" class="form-label">Ngân hàng <span class="text-danger">*</span></label>
+                            <select name="bank_name" class="form-select" id="id_bank_name" required>
+                                <option value="">-- Chọn ngân hàng --</option>
+                                {% for value, label in form.fields.bank_name.choices %}
+                                    <option value="{{ value }}" {% if form.bank_name.value == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.bank_name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.bank_name.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4 {% if form.bank_name.value != 'other' %}d-none{% endif %}" id="otherBankGroup">
+                            <label for="id_other_bank_name" class="form-label">Tên ngân hàng khác <span class="text-danger">*</span></label>
+                            <input type="text" name="other_bank_name" class="form-control" id="id_other_bank_name" placeholder="Nhập tên ngân hàng" value="{{ form.other_bank_name.value|default:'' }}">
+                            {% if form.other_bank_name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.other_bank_name.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="id_account_name" class="form-label">Chủ tài khoản <span class="text-danger">*</span></label>
+                            <input type="text" name="account_name" class="form-control" id="id_account_name" placeholder="Nhập tên chủ tài khoản" value="{{ form.account_name.value|default:'' }}" required>
+                            {% if form.account_name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.account_name.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="id_account_number" class="form-label">Số tài khoản <span class="text-danger">*</span></label>
+                            <input type="text" name="account_number" class="form-control" id="id_account_number" placeholder="Nhập số tài khoản" value="{{ form.account_number.value|default:'' }}" required>
+                            {% if form.account_number.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.account_number.errors %}{{ error }}{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="id_branch" class="form-label">Chi nhánh</label>
+                            <input type="text" name="branch" class="form-control" id="id_branch" placeholder="Nhập chi nhánh (không bắt buộc)" value="{{ form.branch.value|default:'' }}">
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" name="is_default" id="id_is_default" {% if form.is_default.value %}checked{% endif %}>
+                            <label class="form-check-label" for="id_is_default">
+                                Đặt làm tài khoản mặc định
+                            </label>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            {% if request.GET.next %}
+                                {% if request.GET.next == 'deposit' %}
+                                <a href="{% url 'deposit_money' %}" class="btn btn-light btn-rounded">
+                                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                                </a>
+                                {% elif request.GET.next == 'withdraw' %}
+                                <a href="{% url 'withdraw_money' %}" class="btn btn-light btn-rounded">
+                                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                                </a>
+                                {% else %}
+                                <a href="{% url 'bank_account_list' %}" class="btn btn-light btn-rounded">
+                                    <i class="fas fa-times me-2"></i>Hủy bỏ
+                                </a>
+                                {% endif %}
+                            {% else %}
+                            <a href="{% url 'bank_account_list' %}" class="btn btn-light btn-rounded">
+                                <i class="fas fa-times me-2"></i>Hủy bỏ
+                            </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary btn-rounded">
+                                <i class="fas fa-save me-2"></i>
+                                {% if bank_account %}Cập nhật{% else %}Thêm mới{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

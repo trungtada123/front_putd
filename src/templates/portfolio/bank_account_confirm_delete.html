@@ -1,0 +1,87 @@
+{% extends 'portfolio/base.html' %}
+
+{% block title %}Xóa tài khoản ngân hàng | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4" data-aos="fade-right">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'wallet' %}">Ví điện tử</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'bank_account_list' %}">Tài khoản ngân hàng</a></li>
+            <li class="breadcrumb-item active">Xóa tài khoản</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up">
+                <div class="card-body p-4 text-center">
+                    <div class="mb-4">
+                        <div class="icon-circle bg-danger-light text-danger mx-auto" style="width: 80px; height: 80px; font-size: 2rem;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    
+                    <h4 class="mb-3">Xác nhận xóa tài khoản</h4>
+                    
+                    <p class="mb-4">Bạn có chắc chắn muốn xóa tài khoản ngân hàng này?</p>
+                    
+                    <div class="card bg-light rounded-4 mb-4 p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-circle me-3">
+                                <i class="fas fa-university text-primary"></i>
+                            </div>
+                            <div class="text-start">
+                                <h6 class="mb-1">
+                                    {% if bank_account.bank_name == 'other' %}
+                                        {{ bank_account.other_bank_name }}
+                                    {% else %}
+                                        {{ bank_account.get_bank_name_display }}
+                                    {% endif %}
+                                </h6>
+                                <div class="text-monospace small">{{ bank_account.account_number }}</div>
+                                <div class="small text-muted">{{ bank_account.account_name }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning rounded-4 mb-4">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                            <div class="text-start">
+                                <strong>Lưu ý:</strong>
+                                <p class="mb-0">Thao tác này không thể hoàn tác. Tài khoản sẽ bị xóa vĩnh viễn khỏi hệ thống.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{% url 'bank_account_list' %}" class="btn btn-light btn-rounded">
+                            <i class="fas fa-times me-2"></i>Hủy bỏ
+                        </a>
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-rounded">
+                                <i class="fas fa-trash me-2"></i>Xác nhận xóa
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-danger-light {
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+    
+    .text-monospace {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+</style>
+{% endblock %}

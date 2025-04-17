@@ -8,6 +8,12 @@ from .models import Portfolio, Asset, Transaction, PortfolioAsset
 from .forms import PortfolioForm, AssetForm, TransactionForm, UserRegistrationForm
 from django.contrib.auth import login
 from decimal import Decimal
+from django.http import JsonResponse
+from .vnstock_services import get_price_board, get_historical_data
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .utils import get_ai_response
 
 def home(request):
     return render(request, 'portfolio/home.html')
@@ -306,4 +312,81 @@ def register(request):
             return redirect('dashboard')
     else:
         form = UserRegistrationForm()
-    return render(request, 'portfolio/register.html', {'form': form}) 
+    return render(request, 'portfolio/register.html', {'form': form})
+
+# ============ MARKET =======
+@login_required
+def market(request):
+    price_board = get_price_board()
+    context = {
+        "price_board_json": price_board.to_json(orient='split'),
+    }
+    return render(request, 'portfolio/market.html', context)
+
+def get_historical_data_api(request, stock_code):
+    try:
+        data = get_historical_data(stock_code)
+        return JsonResponse({'data': data.to_dict('records')})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def get_stock_historical_data(request, symbol):
+    try:
+        # Lấy dữ liệu lịch sử từ vnstock service
+        historical_data = get_historical_data(symbol)
+        
+        # Chuyển đổi dữ liệu thành định dạng phù hợp cho biểu đồ
+        chart_data = []
+        for _, row in historical_data.iterrows():
+            chart_data.append({
+                'time': row['time'].strftime('%Y-%m-%d') if hasattr(row['time'], 'strftime') else str(row['time']),
+                'open': float(row['open']),
+                'high': float(row['high']),
+                'low': float(row['low']),
+                'close': float(row['close'])
+            })
+        
+        print(f"Returning data for {symbol}: {len(chart_data)} records") # Debug log
+        print(f"Sample data: {chart_data[:1]}") # Debug log để xem mẫu dữ liệu
+        return JsonResponse(chart_data, safe=False)
+    except Exception as e:
+        print(f"Error getting data for {symbol}: {str(e)}") # Debug log
+        print(f"Data structure: {historical_data.head()}") if 'historical_data' in locals() else print("No data fetched") # Debug log để xem cấu trúc dữ liệu
+        return JsonResponse({'error': str(e)}, status=500)
+
+@csrf_exempt
+@require_POST
+def ai_chat_api(request):
+    """
+    API endpoint để xử lý các yêu cầu chat với AI
+    """
+    try:
+        data = json.loads(request.body)
+        message = data.get('message', '')
+        
+        if not message:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tin nhắn không được để trống'
+            }, status=400)
+        
+        # Gọi API AI để nhận phản hồi
+        response = get_ai_response(message)
+        
+        return JsonResponse({
+            'success': True,
+            'response': response
+        })
+    
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Dữ liệu JSON không hợp lệ'
+        }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

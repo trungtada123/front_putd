@@ -3,56 +3,367 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Quản lý Danh mục Đầu tư{% endblock %}</title>
+    <title>{% block title %}StockPortfolio - Quản lý đầu tư chứng khoán{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- AOS Animation Library -->
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'portfolio/css/styles.css' %}">
     
     <style>
         :root {
-            --primary-color: #4c6ef5;
-            --success-color: #40c057;
-            --danger-color: #fa5252;
-            --warning-color: #fd7e14;
-            --info-color: #15aabf;
+            --primary-color: #3e63dd;
+            --primary-dark: #2647b1;
+            --primary-light: #eef2ff;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #0ea5e9;
+            --body-bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
+            --transition-base: all 0.3s ease;
+            --radius-sm: 0.375rem;
+            --radius-md: 0.75rem;
+            --radius-lg: 1rem;
+            --radius-xl: 1.5rem;
         }
         
         body {
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Open Sans', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        h1, h2, h3, h4, h5, h6, .navbar-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
         }
         
         .navbar-brand {
-            font-weight: bold;
-            font-size: 1.4rem;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
         }
         
         .nav-link {
             font-weight: 500;
+            padding: 0.75rem 1rem;
+            position: relative;
+            transition: var(--transition-base);
+        }
+        
+        .nav-link.active::after, 
+        .nav-link:hover::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 3px;
+            background-color: var(--primary-color);
+            border-radius: 10px;
         }
         
         .navbar {
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-md);
+            background-color: var(--card-bg) !important;
+            padding: 0.75rem 0;
         }
         
         .card {
-            transition: transform 0.2s;
+            border: none;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            transition: var(--transition-base);
+            background-color: var(--card-bg);
         }
         
         .card:hover {
             transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .btn {
+            font-weight: 500;
+            padding: 0.6rem 1.5rem;
+            border-radius: var(--radius-md);
+            transition: var(--transition-base);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover, 
+        .btn-primary:focus {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            border-color: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            color: white;
         }
         
         .rounded-4 {
-            border-radius: 0.75rem !important;
+            border-radius: var(--radius-lg) !important;
+        }
+        
+        .rounded-5 {
+            border-radius: var(--radius-xl) !important;
+        }
+        
+        .btn-rounded {
+            border-radius: 50px;
+        }
+        
+        .badge {
+            padding: 0.5em 0.75em;
+            font-weight: 500;
+        }
+        
+        .bg-primary {
+            background-color: var(--primary-color) !important;
+        }
+        
+        .bg-success {
+            background-color: var(--success-color) !important;
+        }
+        
+        .bg-danger {
+            background-color: var(--danger-color) !important;
+        }
+        
+        .bg-warning {
+            background-color: var(--warning-color) !important;
+        }
+        
+        .bg-light {
+            background-color: var(--primary-light) !important;
+        }
+        
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+        
+        .text-success {
+            color: var(--success-color) !important;
+        }
+        
+        .text-danger {
+            color: var(--danger-color) !important;
+        }
+        
+        .text-warning {
+            color: var(--warning-color) !important;
+        }
+        
+        .text-muted {
+            color: var(--text-secondary) !important;
+        }
+        
+        .table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .table th {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .table th, .table td {
+            padding: 1rem;
+        }
+        
+        .icon-circle {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+        }
+        
+        .dropdown-menu {
+            border: none;
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--radius-md);
+        }
+        
+        .dropdown-item {
+            padding: 0.7rem 1.5rem;
+        }
+        
+        .form-control, .form-select {
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            border-color: var(--border-color);
+        }
+        
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgba(62, 99, 221, 0.25);
+            border-color: var(--primary-color);
+        }
+        
+        .card-heading {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-heading-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            margin-right: 1rem;
+        }
+        
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl) !important;
+        }
+        
+        footer {
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            color: #fff;
+            padding: 4rem 0 2rem;
+            margin-top: 6rem;
+        }
+        
+        footer a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+        }
+        
+        footer a:hover {
+            color: #fff;
+        }
+        
+        .page-transition {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stat-card {
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            height: 100%;
+            border-left: 5px solid transparent;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stat-card-value {
+            font-size: 1.75rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-card-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-card-portfolio {
+            border-left-color: var(--primary-color);
+        }
+        
+        .stat-card-assets {
+            border-left-color: var(--success-color);
+        }
+        
+        .stat-card-value {
+            border-left-color: var(--warning-color);
+        }
+        
+        .stat-card-transactions {
+            border-left-color: var(--info-color);
+        }
+        
+        /* Price colors for market */
+        .price-up {
+            color: var(--success-color) !important;
+        }
+        
+        .price-down {
+            color: var(--danger-color) !important;
+        }
+        
+        .price-ceiling {
+            color: #9333ea !important;
+        }
+        
+        .price-floor {
+            color: #0891b2 !important;
+        }
+        
+        .price-reference {
+            color: #f59e0b !important;
         }
     </style>
+    
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white py-3">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white py-3 sticky-top">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <i class="fas fa-chart-line text-primary me-2"></i>StockPortfolio
@@ -83,17 +394,37 @@
                             <i class="fas fa-exchange-alt me-1"></i> Giao dịch
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/wallet/' in request.path %}active{% endif %}" href="{% url 'wallet' %}">
+                            <i class="fas fa-wallet me-1"></i> Ví điện tử
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/market/' in request.path %}active{% endif %}" href="{% url 'market' %}">
+                            <i class="fas fa-chart-line me-1"></i> Thị trường
+                        </a>
+                    </li>
                     {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i> {{ user.username }}
+                            <div class="d-inline-block icon-circle bg-primary text-white me-1">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {{ user.username }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#">
+                                <i class="fas fa-user-cog me-2 text-primary"></i>Tài khoản</a>
+                            </li>
+                            <li><a class="dropdown-item" href="#">
+                                <i class="fas fa-cog me-2 text-primary"></i>Cài đặt</a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'logout' %}">
-                                <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất</a>
+                                <i class="fas fa-sign-out-alt me-2 text-danger"></i>Đăng xuất</a>
                             </li>
                         </ul>
                     </li>
@@ -104,7 +435,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-primary text-white px-3 rounded-pill ms-2" href="{% url 'login' %}">
+                        <a class="nav-link btn btn-primary text-white px-3 btn-rounded ms-2" href="{% url 'login' %}">
                             <i class="fas fa-sign-in-alt me-1"></i> Đăng nhập
                         </a>
                     </li>
@@ -115,20 +446,70 @@
     </nav>
 
     <!-- Main Content -->
-    <main>
+    <main class="page-transition">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light py-4 mt-5">
+    <footer>
         <div class="container">
             <div class="row">
-                <div class="col-md-6">
-                    <h5>StockPortfolio</h5>
-                    <p>Hệ thống quản lý danh mục đầu tư chứng khoán</p>
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5 class="mb-3">
+                        <i class="fas fa-chart-line me-2"></i>StockPortfolio
+                    </h5>
+                    <p class="mb-3 pe-lg-4">Hệ thống quản lý danh mục đầu tư chứng khoán hiện đại giúp bạn theo dõi và tối ưu hóa tài sản đầu tư.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="btn btn-sm btn-outline-light rounded-circle p-2">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-light rounded-circle p-2">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="btn btn-sm btn-outline-light rounded-circle p-2">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <p>&copy; 2024 StockPortfolio. All rights reserved.</p>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h6 class="mb-3">Liên kết</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="{% url 'home' %}">Trang chủ</a></li>
+                        <li class="mb-2"><a href="{% url 'dashboard' %}">Bảng điều khiển</a></li>
+                        <li class="mb-2"><a href="{% url 'portfolio_list' %}">Danh mục</a></li>
+                        <li class="mb-2"><a href="{% url 'asset_list' %}">Tài sản</a></li>
+                        <li class="mb-2"><a href="{% url 'wallet' %}">Ví điện tử</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-4 mb-md-0">
+                    <h6 class="mb-3">Tài nguyên</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="#">Hướng dẫn</a></li>
+                        <li class="mb-2"><a href="#">FAQ</a></li>
+                        <li class="mb-2"><a href="#">Blog</a></li>
+                        <li class="mb-2"><a href="#">Hỗ trợ</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="mb-3">Nhận thông báo</h6>
+                    <p class="mb-3">Đăng ký nhận thông báo về thị trường và cập nhật mới.</p>
+                    <div class="input-group mb-3">
+                        <input type="email" class="form-control" placeholder="Email của bạn">
+                        <button class="btn btn-primary" type="button">Đăng ký</button>
+                    </div>
+                </div>
+            </div>
+            <hr class="mt-4 mb-3 border-top border-secondary">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0">&copy; 2024 StockPortfolio. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                    <ul class="list-inline mb-0">
+                        <li class="list-inline-item"><a href="#">Điều khoản sử dụng</a></li>
+                        <li class="list-inline-item">·</li>
+                        <li class="list-inline-item"><a href="#">Chính sách bảo mật</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -136,6 +517,51 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- AOS Animation Library -->
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true
+        });
+    </script>
+    <script src="{% static 'portfolio/js/chat.js' %}"></script>
     {% block extra_js %}{% endblock %}
+
+    <div class="ai-chat-popup" id="aiChatPopup">
+        <div class="chat-header">
+            <h5 class="mb-0"><i class="fas fa-robot me-2"></i>Trợ lý AI</h5>
+            <div>
+                <button class="btn btn-sm btn-light rounded-circle" id="minimizeChat">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button class="btn btn-sm btn-light rounded-circle" id="closeChat">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="message ai-message">
+                <div class="message-content">
+                    <p>Xin chào! Tôi là trợ lý AI. Tôi có thể giúp bạn với các câu hỏi về đầu tư và quản lý danh mục.</p>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input">
+            <form id="chatForm">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="userMessage" placeholder="Nhập câu hỏi của bạn..." autocomplete="off">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <button class="ai-chat-button" id="aiChatButton">
+        <i class="fas fa-comments"></i>
+    </button>
 </body>
-</html> 
+</html>
