@@ -151,5 +151,5 @@ else:
 "
 
 # Chạy server
-echo "🚀 Khởi chạy Django server tại 0.0.0.0:8000"
-python manage.py runserver 0.0.0.0:8000
+echo "🚀 Khởi chạy Django server tại 172.0.0.1:8000"
+python manage.py runserver 172.0.0.1:8000

@@ -66,6 +66,7 @@ echo     'django.contrib.staticfiles',
 echo     'crispy_forms',
 echo     'crispy_bootstrap5',
 echo     'portfolio',
+echo     'django.contrib.humanize',
 echo ]
 echo.
 echo MIDDLEWARE = [

@@ -39,11 +39,16 @@ Hệ thống bao gồm các bảng chính:
 ## Hướng Dẫn Cài Đặt
 ### 1. Clone repository
 ```bash
-$ git clone https://github.com/iuh-application-development/portfolio_management.git
+$ git clone https://github.com/trungtada123/PortfolioManagement_DTDM.git
 ```
 ### 2. Cài đặt App
 ```bash
 $ ./run.bat
+```
+
+### 3. Run docker:
+```bash
+$ docker-compose up --build
 ```
 ### 4. Cấu hình PostgreSQL
 Cập nhật file `.env` với thông tin database:
