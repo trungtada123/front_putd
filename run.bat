@@ -26,6 +26,9 @@ REM Cap nhat pip va cai dat cac goi co ban
 python -m pip install --upgrade pip
 python -m pip install wheel setuptools
 
+REM Cai dat cac goi tu requirements.txt
+python -m pip install -r requirements.txt
+
 REM Di chuyen vao thu muc src
 cd src
 
@@ -33,9 +36,6 @@ REM Xoa database cu neu co
 if exist db.sqlite3 (
     del db.sqlite3
 )
-
-REM Cai dat cac goi tu requirements.txt
-python -m pip install -r requirements.txt
 
 REM Tao cac thu muc can thiet
 if not exist static mkdir static

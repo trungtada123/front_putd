@@ -1,110 +1,153 @@
+# Start of Selection
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 from django.utils import timezone
 
+# Mô hình người dùng
 class User(AbstractUser):
+    # Số điện thoại
     phone = models.CharField(max_length=15, blank=True)
+    # Địa chỉ
     address = models.TextField(blank=True)
     
     class Meta:
+        # Tạo chỉ mục cho email và username
         indexes = [
             models.Index(fields=['email']),
             models.Index(fields=['username'])
         ]
 
+# Mô hình danh mục đầu tư
 class Portfolio(models.Model):
+    # Lựa chọn mức độ rủi ro
     RISK_CHOICES = [
         ('low', 'Thấp'),
         ('medium', 'Trung bình'),
         ('high', 'Cao'),
     ]
     
+    # Tên danh mục
     name = models.CharField(max_length=100, verbose_name="Tên danh mục")
+    # Người dùng sở hữu danh mục
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='portfolios')
+    # Mô tả danh mục
     description = models.TextField(blank=True, verbose_name="Mô tả")
+    # Mục tiêu đầu tư
     investment_goal = models.CharField(max_length=200, blank=True, verbose_name="Mục tiêu đầu tư")
+    # Giá trị mục tiêu
     target_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name="Giá trị mục tiêu")
+    # Mức độ rủi ro
     risk_tolerance = models.CharField(max_length=10, choices=RISK_CHOICES, default='medium', verbose_name="Mức độ rủi ro")
+    # Thời gian tạo
     created_at = models.DateTimeField(auto_now_add=True)
+    # Thời gian cập nhật
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        # Tạo chỉ mục cho người dùng
         indexes = [
             models.Index(fields=['user'])
         ]
+        # Tên hiển thị
         verbose_name = "Danh mục đầu tư"
         verbose_name_plural = "Danh mục đầu tư"
 
+    # Trả về tên danh mục
     def __str__(self):
         return self.name
 
+    # Tính tổng giá trị danh mục
     @property
     def total_value(self):
         return sum(asset.current_value for asset in self.portfolioasset_set.all())
 
+    # Tính tổng chi phí danh mục
     @property
     def total_cost(self):
         return sum(asset.quantity * asset.average_price for asset in self.portfolioasset_set.all())
 
+    # Tính lãi/lỗ danh mục
     @property
     def profit_loss(self):
         return self.total_value - self.total_cost
 
+    # Tính lãi/lỗ danh mục theo phần trăm
     @property
     def profit_loss_percentage(self):
         if self.total_cost == 0:
             return 0
         return (self.profit_loss / self.total_cost) * 100
 
+    # Tính tiến độ đạt được mục tiêu
     @property
     def target_progress(self):
         if self.target_value == 0:
             return 0
         return (self.total_value / self.target_value) * 100
 
+# Mô hình tài sản
 class Asset(models.Model):
+    # Lựa chọn loại tài sản
     ASSET_TYPES = [
         ('stock', 'Cổ phiếu'),
         ('bond', 'Trái phiếu'),
         ('fund', 'Quỹ đầu tư'),
     ]
     
+    # Mã tài sản
     symbol = models.CharField(max_length=10, unique=True)
+    # Tên tài sản
     name = models.CharField(max_length=100)
+    # Loại tài sản
     type = models.CharField(max_length=10, choices=ASSET_TYPES)
+    # Ngành nghề
     sector = models.CharField(max_length=50)
+    # Mô tả
     description = models.TextField(blank=True)
+    # Giá hiện tại
     current_price = models.DecimalField(max_digits=15, decimal_places=2)
+    # Thời gian cập nhật giá
     last_updated = models.DateTimeField(auto_now=True)
 
     class Meta:
+        # Tạo chỉ mục cho mã tài sản, loại tài sản và ngành nghề
         indexes = [
             models.Index(fields=['symbol']),
             models.Index(fields=['type']),
             models.Index(fields=['sector'])
         ]
 
+# Mô hình tài sản trong danh mục
 class PortfolioAsset(models.Model):
+    # Danh mục sở hữu
     portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE)
+    # Tài sản sở hữu
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    # Số lượng
     quantity = models.IntegerField(default=0)
+    # Giá trung bình
     average_price = models.DecimalField(max_digits=15, decimal_places=2)
+    # Giá trị hiện tại
     current_value = models.DecimalField(max_digits=15, decimal_places=2)
+    # Lãi/lỗ
     profit_loss = models.DecimalField(max_digits=15, decimal_places=2, default=0)
     
     class Meta:
+        # Tạo chỉ mục cho danh mục và tài sản
         indexes = [
             models.Index(fields=['portfolio']),
             models.Index(fields=['asset'])
         ]
 
+    # Cập nhật giá trị và lãi/lỗ
     def update_values(self):
         """Cập nhật giá trị và lãi/lỗ của tài sản"""
         self.current_value = self.quantity * self.asset.current_price
         self.profit_loss = self.current_value - (self.quantity * self.average_price)
         self.save()
 
+    # Tính lại giá trung bình
     def recalculate_average_price(self):
         """Tính lại giá trung bình sau khi có giao dịch mới"""
         transactions = Transaction.objects.filter(
@@ -119,22 +162,33 @@ class PortfolioAsset(models.Model):
             self.average_price = total_cost / total_quantity
         self.save()
 
+# Mô hình giao dịch
 class Transaction(models.Model):
+    # Lựa chọn loại giao dịch
     TYPE_CHOICES = [
         ('buy', 'Mua'),
         ('sell', 'Bán'),
     ]
     
+    # Danh mục sở hữu
     portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE)
+    # Tài sản sở hữu
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+    # Loại giao dịch
     transaction_type = models.CharField(max_length=4, choices=TYPE_CHOICES)
+    # Số lượng
     quantity = models.IntegerField()
+    # Giá
     price = models.DecimalField(max_digits=15, decimal_places=2)
+    # Tổng giá trị
     total_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    # Thời gian giao dịch
     transaction_date = models.DateTimeField()
+    # Ghi chú
     notes = models.TextField(blank=True)
     
     class Meta:
+        # Tạo chỉ mục cho danh mục, tài sản, thời gian giao dịch và loại giao dịch
         indexes = [
             models.Index(fields=['portfolio']),
             models.Index(fields=['asset']),
@@ -142,9 +196,11 @@ class Transaction(models.Model):
             models.Index(fields=['transaction_type'])
         ]
 
+    # Trả về thông tin giao dịch
     def __str__(self):
         return f"{self.get_transaction_type_display()} {self.asset.symbol}"
 
+    # Lưu giao dịch
     def save(self, *args, **kwargs):
         # Tính tổng giá trị giao dịch
         if not self.total_amount:
@@ -179,20 +235,29 @@ class Transaction(models.Model):
         portfolio_asset.update_values()
 
 # ===== Mô hình cho ví điện tử =====
+# Mô hình ví điện tử
 class Wallet(models.Model):
+    # Người dùng sở hữu
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='wallet')
+    # Số dư
     balance = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    # Thời gian tạo
     created_at = models.DateTimeField(auto_now_add=True)
+    # Thời gian cập nhật
     last_updated = models.DateTimeField(auto_now=True)
 
+    # Trả về thông tin ví
     def __str__(self):
         return f"Ví của {self.user.username}"
     
     class Meta:
+        # Tên hiển thị
         verbose_name = "Ví điện tử"
         verbose_name_plural = "Ví điện tử"
 
+# Mô hình tài khoản ngân hàng
 class BankAccount(models.Model):
+    # Lựa chọn ngân hàng
     BANK_CHOICES = [
         ('vietcombank', 'Vietcombank'),
         ('techcombank', 'Techcombank'),
