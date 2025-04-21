@@ -9,25 +9,73 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatForm = document.getElementById('chatForm');
     const userMessage = document.getElementById('userMessage');
     const chatMessages = document.getElementById('chatMessages');
+    const suggestedItems = document.querySelectorAll('.suggested-item');
     
     let chatHistory = [];
     
     // Toggle chat popup
     aiChatButton.addEventListener('click', function() {
         aiChatPopup.style.display = 'flex';
+        
+        // Add animation after display is set
+        setTimeout(() => {
+            aiChatPopup.classList.add('show-animation');
+        }, 10);
+        
         aiChatButton.style.display = 'none';
+        
+        // Scroll to the bottom of the chat messages
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        // Focus the input field
+        setTimeout(() => {
+            userMessage.focus();
+        }, 300);
     });
     
     // Minimize chat
     minimizeChat.addEventListener('click', function() {
-        aiChatPopup.style.display = 'none';
-        aiChatButton.style.display = 'flex';
+        // First remove the animation class
+        aiChatPopup.classList.remove('show-animation');
+        
+        // Then hide after animation completes
+        setTimeout(() => {
+            aiChatPopup.style.display = 'none';
+            aiChatButton.style.display = 'flex';
+        }, 300);
     });
     
     // Close chat
     closeChat.addEventListener('click', function() {
-        aiChatPopup.style.display = 'none';
-        aiChatButton.style.display = 'flex';
+        // First remove the animation class
+        aiChatPopup.classList.remove('show-animation');
+        
+        // Then hide after animation completes
+        setTimeout(() => {
+            aiChatPopup.style.display = 'none';
+            aiChatButton.style.display = 'flex';
+        }, 300);
+    });
+    
+    // Handle suggested questions
+    suggestedItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const question = this.getAttribute('data-question');
+            userMessage.value = question;
+            
+            // Hide the suggested questions section
+            const suggestedQuestionsSection = document.getElementById('suggestedQuestions');
+            if (suggestedQuestionsSection) {
+                suggestedQuestionsSection.style.display = 'none';
+            }
+            
+            // Submit the form
+            const event = new Event('submit', {
+                'bubbles': true,
+                'cancelable': true
+            });
+            chatForm.dispatchEvent(event);
+        });
     });
     
     // Handle sending messages
@@ -55,37 +103,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const messageContent = document.createElement('div');
         messageContent.className = 'message-content';
         
-        // Xử lý định dạng tin nhắn 
+        // Create text node directly to avoid rendering issues with special characters
         if (sender === 'ai') {
-            // Xử lý định dạng tin nhắn
-            let formattedMessage = message
-                // Tách thành các dòng để xử lý danh sách
-                .split('\n');
-                
-            // Xử lý từng dòng
-            formattedMessage = formattedMessage.map(line => {
-                // Xử lý danh sách số
-                if (/^\d+\.\s/.test(line)) {
-                    return `<p class="list-numbered">${line.replace(/(\d+\.\s+)(\*\*[^*]+\*\*:?)/, '<span class="list-number">$1</span><strong>$2</strong>')}</p>`;
-                }
-                // Xử lý danh sách gạch đầu dòng
-                else if (/^[\-\*]\s/.test(line)) {
-                    return `<p class="list-bullet">${line.replace(/^[\-\*]\s+/, '<span class="bullet-point">•</span> ')}</p>`;
-                }
-                // Dòng thường
-                else if (line.trim()) {
-                    return `<p>${line}</p>`;
-                }
-                // Dòng trống
-                return '';
-            }).join('');
+            // Split message by newlines but retain clean text
+            const paragraphs = message.split('\n').filter(line => line.trim() !== '');
             
-            // Xử lý in đậm và in nghiêng
-            formattedMessage = formattedMessage
-                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*([^*]+)\*/g, '<em>$1</em>');
-            
-            messageContent.innerHTML = formattedMessage;
+            paragraphs.forEach(para => {
+                const p = document.createElement('p');
+                // Use textContent instead of innerHTML to avoid rendering issues
+                p.textContent = para.replace(/\*\*/g, '').replace(/\*/g, '');
+                messageContent.appendChild(p);
+            });
         } else {
             const messageParagraph = document.createElement('p');
             messageParagraph.textContent = message;
@@ -106,25 +134,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showTypingIndicator() {
+        // Remove any existing typing indicators
+        removeTypingIndicator();
+        
         const typingDiv = document.createElement('div');
-        typingDiv.className = 'message ai-message typing-indicator-container';
+        typingDiv.className = 'message ai-message';
         typingDiv.id = 'typingIndicator';
         
-        const typingContent = document.createElement('div');
-        typingContent.className = 'message-content';
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
         
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
+        const typingText = document.createElement('p');
+        typingText.textContent = 'Đang trả lời...';
+        messageContent.appendChild(typingText);
         
-        for (let i = 0; i < 3; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'typing-dot';
-            typingIndicator.appendChild(dot);
-        }
-        
-        typingContent.appendChild(typingIndicator);
-        typingDiv.appendChild(typingContent);
-        
+        typingDiv.appendChild(messageContent);
         chatMessages.appendChild(typingDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -137,9 +161,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function callGeminiAPI(message) {
-        // Show typing indicator
-        showTypingIndicator();
-        
         // Call Django API endpoint
         fetch('/api/ai-chat/', {
             method: 'POST',

@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chatForm = document.getElementById('chatForm');
     const userMessage = document.getElementById('userMessage');
     const chatMessages = document.getElementById('chatMessages');
+    const suggestedItems = document.querySelectorAll('.suggested-item');
     
     let chatHistory = [];
     
@@ -28,6 +29,21 @@ document.addEventListener('DOMContentLoaded', function() {
     closeChat.addEventListener('click', function() {
         aiChatPopup.style.display = 'none';
         aiChatButton.style.display = 'flex';
+    });
+    
+    // Handle suggested questions
+    suggestedItems.forEach(item => {
+        item.addEventListener('click', function() {
+            const question = this.getAttribute('data-question');
+            userMessage.value = question;
+            
+            // Submit the form
+            const event = new Event('submit', {
+                'bubbles': true,
+                'cancelable': true
+            });
+            chatForm.dispatchEvent(event);
+        });
     });
     
     // Handle sending messages
@@ -106,25 +122,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showTypingIndicator() {
+        // Remove any existing typing indicators
+        removeTypingIndicator();
+        
         const typingDiv = document.createElement('div');
-        typingDiv.className = 'message ai-message typing-indicator-container';
+        typingDiv.className = 'message ai-message';
         typingDiv.id = 'typingIndicator';
         
         const typingContent = document.createElement('div');
-        typingContent.className = 'message-content';
+        typingContent.className = 'typing-indicator';
         
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'typing-indicator';
-        
+        // Add only one line of dots
         for (let i = 0; i < 3; i++) {
             const dot = document.createElement('div');
             dot.className = 'typing-dot';
-            typingIndicator.appendChild(dot);
+            typingContent.appendChild(dot);
         }
         
-        typingContent.appendChild(typingIndicator);
         typingDiv.appendChild(typingContent);
-        
         chatMessages.appendChild(typingDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -137,9 +152,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function callGeminiAPI(message) {
-        // Show typing indicator
-        showTypingIndicator();
-        
         // Call Django API endpoint
         fetch('/api/ai-chat/', {
             method: 'POST',

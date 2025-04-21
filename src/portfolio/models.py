@@ -34,10 +34,10 @@ class User(AbstractUser):
     @property
     def get_profile_picture(self):
         """Return profile picture URL or uploaded image"""
-        if self.profile_picture_url:
-            return self.profile_picture_url
-        elif self.profile_picture:
+        if self.profile_picture and self.profile_picture.url:
             return self.profile_picture.url
+        elif self.profile_picture_url:
+            return self.profile_picture_url
         return None
 
 # Mô hình danh mục đầu tư

@@ -364,6 +364,10 @@ def callback(request):
                     # Update auth0_user_id if it's not set
                     user.auth0_user_id = auth0_user_id
                     user.save()
+                # Update profile picture URL from Auth0 only if user doesn't have a profile picture
+                elif not user.profile_picture and userinfo.get('picture'):
+                    user.profile_picture_url = userinfo.get('picture', '')
+                    user.save()
             except Exception as e:
                 # Log the error and redirect to login page
                 print(f"Auth0 login error: {str(e)}")
@@ -372,7 +376,7 @@ def callback(request):
         
         if user:
             # Log the user in
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
             
             # Save token data for future use
             request.session['auth0_token'] = token
@@ -423,7 +427,14 @@ def user_profile(request):
     if request.method == 'POST':
         form = UserProfileForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
-            form.save()
+            user_data = form.save(commit=False)
+            
+            # Check if a new profile picture was uploaded
+            if 'profile_picture' in request.FILES and request.FILES['profile_picture']:
+                # If Auth0 user uploads a local picture, prioritize it over the Auth0 URL
+                user_data.profile_picture = request.FILES['profile_picture']
+            
+            user_data.save()
             messages.success(request, 'Thông tin cá nhân đã được cập nhật thành công!')
             return redirect('user_profile')
     else:
@@ -492,6 +503,11 @@ def ai_chat_api(request):
         
         # Gọi API AI để nhận phản hồi
         response = get_ai_response(message)
+        
+        # Đơn giản hóa định dạng phản hồi và loại bỏ ký tự formatting
+        response = response.strip()
+        # Loại bỏ các ký tự đánh dấu in đậm và in nghiêng
+        response = response.replace('**', '').replace('*', '')
         
         return JsonResponse({
             'success': True,
