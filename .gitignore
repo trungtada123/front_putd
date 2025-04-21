@@ -66,3 +66,4 @@ wheels/
 .coverage
 htmlcov/
 
+media/profile_pictures/*
