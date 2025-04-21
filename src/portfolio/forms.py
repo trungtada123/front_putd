@@ -12,6 +12,41 @@ class UserRegistrationForm(UserCreationForm):
         model = User
         fields = ['username', 'email', 'password1', 'password2']
 
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone', 'address', 'gender', 'profile_picture']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nhập tên của bạn'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nhập họ của bạn'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nhập email của bạn'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nhập số điện thoại của bạn'
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Nhập địa chỉ của bạn'
+            }),
+            'gender': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'profile_picture': forms.FileInput(attrs={
+                'class': 'form-control',
+                'id': 'profilePictureInput'
+            }),
+        }
+
 class PortfolioForm(forms.ModelForm):
     class Meta:
         model = Portfolio

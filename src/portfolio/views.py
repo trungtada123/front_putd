@@ -4,9 +4,9 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
-from .models import Portfolio, Asset, Transaction, PortfolioAsset
-from .forms import PortfolioForm, AssetForm, TransactionForm, UserRegistrationForm
-from django.contrib.auth import login
+from .models import Portfolio, Asset, Transaction, PortfolioAsset, User
+from .forms import PortfolioForm, AssetForm, TransactionForm, UserRegistrationForm, UserProfileForm
+from django.contrib.auth import login, logout
 from decimal import Decimal
 from django.http import JsonResponse
 from .vnstock_services import get_price_board, get_historical_data
@@ -14,6 +14,21 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .utils import get_ai_response
+from django.urls import reverse
+from urllib.parse import quote_plus, urlencode
+import os
+from authlib.integrations.django_client import OAuth
+from django.conf import settings
+
+# OAuth setup
+oauth = OAuth()
+oauth.register(
+    "auth0",
+    client_id=settings.AUTH0_CLIENT_ID,
+    client_secret=settings.AUTH0_CLIENT_SECRET,
+    client_kwargs={"scope": "openid profile email"},
+    server_metadata_url=f"https://{settings.AUTH0_DOMAIN}/.well-known/openid-configuration",
+)
 
 def home(request):
     return render(request, 'portfolio/home.html')
@@ -302,17 +317,121 @@ def portfolio_transactions(request, portfolio_id):
         'transactions': transactions
     })
 
-def register(request):
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
+# Auth0 related views
+def login_view(request):
+    return oauth.auth0.authorize_redirect(
+        request, 
+        request.build_absolute_uri(reverse("callback")),
+        prompt="login"  # Force Auth0 to show the login page and ignore existing session
+    )
+
+def callback(request):
+    # Get the token from Auth0
+    token = oauth.auth0.authorize_access_token(request)
+    
+    # Extract user info from the token
+    userinfo = token.get('userinfo')
+    
+    if userinfo:
+        # Check if user exists, create if not
+        email = userinfo.get('email', '')
+        auth0_user_id = userinfo.get('sub', '')
+        user = None
+        
+        if email:
+            try:
+                # First try to find by auth0_user_id which should be unique
+                user = User.objects.filter(auth0_user_id=auth0_user_id).first()
+                
+                if not user:
+                    # If not found by auth0_user_id, try by email
+                    # Use filter().first() instead of get() to avoid MultipleObjectsReturned
+                    user = User.objects.filter(email=email).first()
+                
+                if not user:
+                    # Create new user if not found by either method
+                    user = User.objects.create(
+                        username=email.split('@')[0],
+                        email=email,
+                        first_name=userinfo.get('given_name', ''),
+                        last_name=userinfo.get('family_name', ''),
+                        profile_picture_url=userinfo.get('picture', ''),
+                        auth0_user_id=auth0_user_id
+                    )
+                    user.set_unusable_password()
+                    user.save()
+                elif not user.auth0_user_id:
+                    # Update auth0_user_id if it's not set
+                    user.auth0_user_id = auth0_user_id
+                    user.save()
+            except Exception as e:
+                # Log the error and redirect to login page
+                print(f"Auth0 login error: {str(e)}")
+                messages.error(request, "There was an error during authentication. Please try again.")
+                return redirect('login')
+        
+        if user:
+            # Log the user in
             login(request, user)
-            messages.success(request, 'Đăng ký thành công!')
+            
+            # Save token data for future use
+            request.session['auth0_token'] = token
+            
+            # Redirect to dashboard
             return redirect('dashboard')
+    
+    # Fallback to home page if something fails
+    messages.error(request, "Authentication failed. Please try again.")
+    return redirect('home')
+
+def logout_view(request):
+    """Log the user out of both Django and Auth0"""
+    # Log the user out of Django
+    logout(request)
+    
+    # Clear auth0 session
+    request.session.clear()
+    
+    # Build the Auth0 logout URL
+    return_to = request.build_absolute_uri(reverse('home'))
+    logout_url = f"https://{settings.AUTH0_DOMAIN}/v2/logout?" + urlencode(
+        {
+            "returnTo": return_to,
+            "client_id": settings.AUTH0_CLIENT_ID,
+        },
+        quote_via=quote_plus,
+    )
+    
+    # Redirect to Auth0 logout URL
+    return redirect(logout_url)
+
+def register(request):
+    """Redirect to Auth0 signup page"""
+    # Redirect to login with signup screen hint
+    return oauth.auth0.authorize_redirect(
+        request,
+        request.build_absolute_uri(reverse("callback")),
+        screen_hint="signup",
+        prompt="login"  # Force Auth0 to ignore existing session
+    )
+
+# User profile view
+@login_required
+def user_profile(request):
+    user = request.user
+    
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Thông tin cá nhân đã được cập nhật thành công!')
+            return redirect('user_profile')
     else:
-        form = UserRegistrationForm()
-    return render(request, 'portfolio/register.html', {'form': form})
+        form = UserProfileForm(instance=user)
+    
+    return render(request, 'portfolio/user_profile.html', {
+        'form': form
+    })
 
 # ============ MARKET =======
 @login_required

@@ -10,6 +10,19 @@ class User(AbstractUser):
     phone = models.CharField(max_length=15, blank=True)
     # Địa chỉ
     address = models.TextField(blank=True)
+    # Giới tính
+    GENDER_CHOICES = [
+        ('male', 'Nam'),
+        ('female', 'Nữ'),
+        ('other', 'Khác'),
+    ]
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
+    # Profile picture - URL from Auth0 or uploaded image
+    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
+    # Profile picture URL (for Auth0)
+    profile_picture_url = models.URLField(blank=True, null=True)
+    # Auth0 User ID
+    auth0_user_id = models.CharField(max_length=100, blank=True, null=True, unique=True)
     
     class Meta:
         # Tạo chỉ mục cho email và username
@@ -17,6 +30,15 @@ class User(AbstractUser):
             models.Index(fields=['email']),
             models.Index(fields=['username'])
         ]
+
+    @property
+    def get_profile_picture(self):
+        """Return profile picture URL or uploaded image"""
+        if self.profile_picture_url:
+            return self.profile_picture_url
+        elif self.profile_picture:
+            return self.profile_picture.url
+        return None
 
 # Mô hình danh mục đầu tư
 class Portfolio(models.Model):

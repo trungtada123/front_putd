@@ -23,9 +23,15 @@ urlpatterns = [
     path('transactions/', views.transaction_list, name='transaction_list'),
     path('transactions/create/', views.transaction_create, name='transaction_create'),
     
+    # Auth0 authentication
     path('register/', views.register, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='portfolio/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('social/complete/auth0/', views.callback, name='callback'),
+    
+    # User profile
+    path('profile/', views.user_profile, name='user_profile'),
+    
     path('market/', views.market, name='market'),
     path('api/historical-data/<str:symbol>/', views.get_stock_historical_data, name='get_stock_historical_data'),
     

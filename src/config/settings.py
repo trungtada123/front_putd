@@ -1,7 +1,11 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Template directory configuration
+TEMPLATE_DIR = os.path.join(BASE_DIR, "templates")
 
 SECRET_KEY = 'django-insecure-default-key-for-development'
 
@@ -37,7 +41,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [TEMPLATE_DIR],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -87,8 +91,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-LOGIN_URL = 'login'
+LOGIN_URL = '/login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'
 
 AUTH_USER_MODEL = 'portfolio.User'
+
+# Load environment variables
+ENV_FILE = find_dotenv()
+if ENV_FILE:
+    load_dotenv(ENV_FILE)
+
+# Auth0 settings
+AUTH0_DOMAIN = os.environ.get('AUTH0_DOMAIN')
+AUTH0_CLIENT_ID = os.environ.get('AUTH0_CLIENT_ID')
+AUTH0_CLIENT_SECRET = os.environ.get('AUTH0_CLIENT_SECRET')

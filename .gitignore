@@ -45,3 +45,24 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg 
+
+# Add the specified directory
+.demo\sur\static\portfolio\img
+
+# Local development settings
+.env.*
+!.env.example
+
+# Database
+*.sqlite3
+*.db
+
+# Static and media files
+/static/
+/media/
+/staticfiles/
+
+# Test coverage
+.coverage
+htmlcov/
+
