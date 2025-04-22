@@ -1,23 +1,81 @@
 {% extends "portfolio/base.html" %}
 
 {% load static %}
-<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
 {% load humanize %}
 
 {% block title %}Thị trường - Portfolio Management{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'userLogin/css/market.css' %}">
+<style>
+    .table-container {
+        margin-top: 20px;
+        max-height: 600px;
+        overflow-y: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .price-ceiling { color: #9C27B0; font-weight: bold; }
+    .price-floor { color: #2196F3; font-weight: bold; }
+    .price-reference { color: #FFC107; }
+    .price-up { color: #4CAF50; font-weight: bold; }
+    .price-down { color: #F44336; font-weight: bold; }
+    .stock-search {
+        padding: 12px;
+        border-radius: 25px;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .loading-container {
+        text-align: center;
+        padding: 20px;
+        font-size: 18px;
+    }
+    .error-message {
+        color: #F44336;
+        text-align: center;
+        padding: 20px;
+        font-size: 18px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<main class="market-content container">
-    <div class="search-container mb-4">
-        <input type="text" id="stockSearch" placeholder="Tìm kiếm cổ phiếu..." class="form-control stock-search">
+<main class="market-content container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2 class="mb-3">Thị trường chứng khoán</h2>
+            <div class="search-container mb-3 d-flex justify-content-between">
+                <div class="search-box flex-grow-1 me-3">
+                    <input type="text" id="stockSearch" placeholder="Tìm kiếm cổ phiếu..." class="form-control stock-search">
+                </div>
+                <div class="action-buttons">
+                    <a href="{% url 'sync_assets' %}" class="btn btn-primary">
+                        <i class="fas fa-sync-alt me-1"></i> Đồng bộ cổ phiếu
+                    </a>
+                </div>
+            </div>
+            
+            {% if messages %}
+            <div class="messages mb-3">
+                {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if request.user.is_staff %}
+            <div id="debugInfo" class="mb-3"></div>
+            {% endif %}
+        </div>
     </div>
+    
     <div class="table-container table-responsive">
         <table class="table table-hover">
-            <thead class="thead-light">
+            <thead class="table-light">
                 <tr>
                     <th rowspan="2">CK</th>
                     <th rowspan="2">Trần</th>
@@ -30,6 +88,15 @@
                     <th>Khối lượng</th>
                 </tr>
             </thead>
+            <tbody id="marketTableBody">
+                <tr>
+                    <td colspan="6">
+                        <div class="loading-container">
+                            <span>Đang tải dữ liệu thị trường...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
         </table>
     </div>
     
@@ -45,60 +112,51 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const price_board = JSON.parse('{{ price_board_json|escapejs }}');
-        if (price_board){
-            const table = document.querySelector(".table-container table");
+        console.log('DOM loaded, parsing price board data...');
+        const tableBody = document.getElementById('marketTableBody');
+        
+        try {
+            // Log raw data for debugging
+            console.log('Raw price_board_json:', '{{ price_board_json|escapejs }}');
             
-            const data = price_board.data
-            const columns = price_board.columns
-
-            let symbol_index = null
-            let ceiling_index = null
-            let floor_index = null
-            let ref_price_index = null
-            let match_vol_index = null
-            let match_price_index = null
-
-            for (var i = 0; i < columns.length; i++) {
-                if (columns[i][1] == "symbol"){
-                    symbol_index = i;
-                }
-                else if (columns[i][1] == "ceiling"){
-                    ceiling_index = i;
-                }
-                else if (columns[i][1] == "floor"){
-                    floor_index = i;
-                }
-                else if (columns[i][1] == "ref_price"){
-                    ref_price_index = i;
-                }
-                else if (columns[i][1] == "match_vol"){
-                    match_vol_index = i;
-                }
-                else if (columns[i][1] == "match_price"){
-                    match_price_index = i;
-                }
+            const price_board = JSON.parse('{{ price_board_json|escapejs }}');
+            console.log('Parsed price_board:', price_board);
+            
+            if (!price_board || !price_board.data || !price_board.columns) {
+                throw new Error('Invalid price board data structure');
             }
-
-            const table_body = document.createElement("tbody");
+            
+            // Add debugging info to the page for admins
+            if (document.getElementById('debugInfo')) {
+                const debugInfo = `
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">Debug Information</div>
+                        <div class="card-body">
+                            <p>Data columns: ${JSON.stringify(price_board.columns)}</p>
+                            <p>First row: ${JSON.stringify(price_board.data[0])}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('debugInfo').innerHTML = debugInfo;
+            }
             
             // Format functions
             function formatPrice(price) {
+                if (!price || isNaN(parseFloat(price))) return 'N/A';
                 return parseFloat(price/1000).toFixed(2);
             }
             
             function formatVolume(volume) {
+                if (!volume || isNaN(parseFloat(volume))) return 'N/A';
                 return parseFloat(volume).toLocaleString('en-US');
             }
             
             function getPriceClass(matchPrice, refPrice, ceiling, floor) {
+                if (!matchPrice || !refPrice) return '';
                 if (matchPrice === ceiling) return 'price-ceiling';
                 if (matchPrice === floor) return 'price-floor';
                 if (matchPrice === refPrice) return 'price-reference';
@@ -107,56 +165,116 @@
                 return '';
             }
             
-            let table_body_content = "<tbody>";
-            for (var i=0; i<data.length; i++){
-                if (data[i][symbol_index]){
-                    const matchPrice = data[i][match_price_index];
-                    const refPrice = data[i][ref_price_index];
-                    const ceiling = data[i][ceiling_index];
-                    const floor = data[i][floor_index];
-                    
-                    table_body_content += "<tr title='Click để xem biểu đồ giá'>";
-                    table_body_content += `<td>${data[i][symbol_index]}</td>`;
-                    table_body_content += `<td class="price-ceiling">${formatPrice(ceiling)}</td>`;
-                    table_body_content += `<td class="price-floor">${formatPrice(floor)}</td>`;
-                    table_body_content += `<td class="price-reference">${formatPrice(refPrice)}</td>`;
-                    table_body_content += `<td class="${getPriceClass(matchPrice, refPrice, ceiling, floor)}">${formatPrice(matchPrice)}</td>`;
-                    table_body_content += `<td>${formatVolume(data[i][match_vol_index])}</td>`;
-                    table_body_content += "</tr>";
+            const data = price_board.data;
+            const columns = price_board.columns;
+            
+            // Find column indices
+            let columnIndices = {};
+            
+            // Search for each column index dynamically with multiple possible names
+            const columnMappings = {
+                'symbol': ['symbol', 'listing_symbol', 'ticker', '0'],
+                'ceiling': ['ceiling', 'listing_ceiling', '1'],
+                'floor': ['floor', 'listing_floor', '2'],
+                'ref_price': ['ref_price', 'listing_ref_price', '3'],
+                'match_price': ['match_price', 'match_match_price', 'match', '4'],
+                'match_vol': ['match_vol', 'match_match_vol', 'match_qtty', 'volume', '5']
+            };
+            
+            for (let targetCol in columnMappings) {
+                for (let i = 0; i < columns.length; i++) {
+                    const colName = String(columns[i]).toLowerCase();
+                    if (columnMappings[targetCol].some(name => colName.includes(name))) {
+                        columnIndices[targetCol] = i;
+                        break;
+                    }
+                }
+                
+                // If column not found by name, try index as fallback
+                if (columnIndices[targetCol] === undefined) {
+                    // Get the numeric index from the list
+                    const indexStr = columnMappings[targetCol].find(name => !isNaN(parseInt(name)));
+                    if (indexStr) {
+                        columnIndices[targetCol] = parseInt(indexStr);
+                    }
                 }
             }
-            table_body_content += "</tbody>";
-            table_body.innerHTML = table_body_content;
-            table.appendChild(table_body);
+            
+            console.log('Column indices:', columnIndices);
+            
+            // If symbol column is still not found, try using the first column as a fallback
+            if (columnIndices.symbol === undefined) {
+                columnIndices.symbol = 0; // Default to first column
+                console.log('Symbol column not found, using first column as fallback');
+            }
+            
+            let tableHTML = '';
+            for (let i = 0; i < data.length; i++) {
+                if (data[i][columnIndices.symbol]) {
+                    const symbol = data[i][columnIndices.symbol];
+                    const ceiling = columnIndices.ceiling ? data[i][columnIndices.ceiling] : 0;
+                    const floor = columnIndices.floor ? data[i][columnIndices.floor] : 0;
+                    const refPrice = columnIndices.ref_price ? data[i][columnIndices.ref_price] : 0;
+                    const matchPrice = columnIndices.match_price ? data[i][columnIndices.match_price] : 0;
+                    const matchVol = columnIndices.match_vol ? data[i][columnIndices.match_vol] : 0;
+                    
+                    tableHTML += `<tr title='Click để xem biểu đồ giá'>
+                        <td>${symbol}</td>
+                        <td class="price-ceiling">${formatPrice(ceiling)}</td>
+                        <td class="price-floor">${formatPrice(floor)}</td>
+                        <td class="price-reference">${formatPrice(refPrice)}</td>
+                        <td class="${getPriceClass(matchPrice, refPrice, ceiling, floor)}">${formatPrice(matchPrice)}</td>
+                        <td>${formatVolume(matchVol)}</td>
+                    </tr>`;
+                }
+            }
+            
+            if (tableHTML) {
+                tableBody.innerHTML = tableHTML;
+            } else {
+                throw new Error('No valid stock data found');
+            }
             
             // Add search functionality
             const searchInput = document.getElementById('stockSearch');
             searchInput.addEventListener('input', function() {
                 this.value = this.value.toUpperCase();
                 const searchText = this.value;
-                const rows = table.querySelectorAll('tbody tr');
+                const rows = tableBody.querySelectorAll('tr');
                 
                 rows.forEach(row => {
-                    const stockSymbol = row.cells[0].textContent;
-                    if (stockSymbol.toUpperCase().includes(searchText)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
+                    if (row.cells && row.cells.length > 0) {
+                        const stockSymbol = row.cells[0].textContent;
+                        if (stockSymbol.toUpperCase().includes(searchText)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
                     }
                 });
             });
             
             // Add click event to stock symbols to show chart
-            const rows = table.querySelectorAll('tbody tr');
+            const rows = tableBody.querySelectorAll('tr');
             rows.forEach(row => {
-                row.addEventListener('click', function() {
-                    const stockSymbol = this.cells[0].textContent;
-                    console.log('Clicked stock:', stockSymbol); // Debug log
-                    showChart(stockSymbol);
-                });
-                
-                row.style.cursor = 'pointer';
+                if (row.cells && row.cells.length > 0) {
+                    row.addEventListener('click', function() {
+                        if (this.cells && this.cells.length > 0) {
+                            const stockSymbol = this.cells[0].textContent;
+                            console.log('Clicked stock:', stockSymbol);
+                            showChart(stockSymbol);
+                        }
+                    });
+                    row.style.cursor = 'pointer';
+                }
             });
+            
+        } catch (error) {
+            console.error('Error processing price board data:', error);
+            tableBody.innerHTML = `<tr><td colspan="6"><div class="error-message">
+                Không thể tải dữ liệu thị trường. Vui lòng thử lại sau.<br>
+                <small>Chi tiết lỗi: ${error.message}</small>
+                </div></td></tr>`;
         }
 
         // -------------- Chart Modal Functionality
@@ -187,7 +305,7 @@
         let candleSeries = null;
         
         function showChart(stockCode) {
-            console.log('Opening chart for:', stockCode); // Debug log
+            console.log('Opening chart for:', stockCode);
             document.getElementById('stockSymbol').textContent = stockCode;
             modal.style.display = "block";
             
@@ -196,9 +314,9 @@
         }
         
         function createChart() {
-            console.log('Creating chart...'); // Debug log
+            console.log('Creating chart...');
             const chartContainer = document.getElementById('chart-container');
-            chartContainer.innerHTML = '';
+            chartContainer.innerHTML = '<div class="loading-container">Đang tải dữ liệu biểu đồ...</div>';
             
             chart = LightweightCharts.createChart(chartContainer, {
                 width: chartContainer.clientWidth,
@@ -232,26 +350,26 @@
                 wickDownColor: '#c62828'
             });
 
-            console.log('Chart created successfully'); // Debug log
+            console.log('Chart created successfully');
         }
         
         function loadChartData(stockCode) {
-            console.log('Loading data for:', stockCode); // Debug log
+            console.log('Loading data for:', stockCode);
             
             fetch(`/api/historical-data/${stockCode}/`)
                 .then(response => {
-                    console.log('Response status:', response.status); // Debug log
+                    console.log('Response status:', response.status);
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
                     }
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Received data:', data); // Debug log
-                    if (Array.isArray(data)) {
+                    console.log('Received data count:', data.length);
+                    if (Array.isArray(data) && data.length > 0) {
                         candleSeries.setData(data);
                     } else {
-                        throw new Error('Invalid data format');
+                        throw new Error('Invalid data format or empty data');
                     }
                 })
                 .catch(error => {

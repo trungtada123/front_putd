@@ -102,7 +102,13 @@ class TransactionForm(forms.ModelForm):
                 format='%Y-%m-%dT%H:%M'
             ),
             'notes': forms.Textarea(attrs={'rows': 3}),
-            'portfolio': forms.HiddenInput()
+            'portfolio': forms.HiddenInput(),
+            'asset': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True,
+                'id': 'id_asset',
+                'placeholder': 'Chọn mã cổ phiếu'
+            })
         }
 
     def __init__(self, *args, **kwargs):
