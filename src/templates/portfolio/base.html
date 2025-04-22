@@ -4,6 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% if request.user.is_authenticated %}
+    <meta name="username" content="{{ request.user.username }}">
+    {% endif %}
     <title>{% block title %}StockPortfolio - Quản lý đầu tư chứng khoán{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->

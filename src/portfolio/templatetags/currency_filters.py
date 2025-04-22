@@ -21,4 +21,19 @@ def dinh_dang_tien(so):
     formatted = "{:,.0f}".format(so)  # No decimal places for currency
     
     # Replace commas with dots for thousand separators
-    return formatted.replace(",", ".") 
+    return formatted.replace(",", ".")
+
+@register.filter(name='maximum')
+def maximum(value, arg):
+    """
+    Returns the maximum value between the value and the argument.
+    This is useful to ensure a value is not less than a minimum value.
+    
+    Example: {{ value|maximum:0 }} will return 0 if value is negative
+    """
+    try:
+        value = float(value)
+        arg = float(arg)
+        return max(value, arg)
+    except (ValueError, TypeError):
+        return arg 

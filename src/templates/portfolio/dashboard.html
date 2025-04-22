@@ -122,9 +122,9 @@
                                 <span class="fw-medium">{{ portfolio.total_value|default:"0"|dinh_dang_tien }} VND</span>
                             </td>
                             <td>
-                                {% with profit=portfolio.profit_loss %}
+                                {% with profit=portfolio.profit_loss_percentage %}
                                 <span class="{% if profit > 0 %}profit-value{% elif profit < 0 %}loss-value{% endif %}">
-                                    {% if profit > 0 %}+{% endif %}{{ profit|default:"0"|floatformat:2 }}%
+                                    {% if profit > 0 %}+{% endif %}{{ profit|default:"0"|dinh_dang_tien }}%
                                 </span>
                                 {% endwith %}
                             </td>

@@ -6,9 +6,11 @@ from django.db.models import Sum
 from django.core.paginator import Paginator
 from datetime import timedelta
 import uuid
+from django.db import transaction
 
 from .models import Wallet, BankAccount, WalletTransaction
 from .forms import BankAccountForm, DepositForm, WithdrawForm
+from .templatetags.currency_filters import dinh_dang_tien
 
 @login_required
 def wallet(request):
@@ -93,6 +95,23 @@ def deposit_money(request):
             bank_account = form.cleaned_data.get('bank_account')
             agree_terms = form.cleaned_data['agree_terms']
             
+            # Tạo transaction_id duy nhất để tránh giao dịch trùng lặp
+            transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
+            
+            # Kiểm tra xem giao dịch có trùng lặp không (trong vòng 5 phút gần đây)
+            five_minutes_ago = timezone.now() - timedelta(minutes=5)
+            recent_deposits = WalletTransaction.objects.filter(
+                user=request.user,
+                type='deposit',
+                amount=amount,
+                payment_method=payment_method,
+                created_at__gte=five_minutes_ago
+            )
+            
+            if recent_deposits.exists():
+                messages.warning(request, 'Một giao dịch nạp tiền tương tự đã được thực hiện trong vòng 5 phút qua. Vui lòng đợi một lát và kiểm tra số dư của bạn trước khi thử lại.')
+                return redirect('wallet')
+            
             # Nếu là phương thức thanh toán chuyển khoản ngân hàng nhưng không chọn tài khoản nào
             if payment_method == 'bank_transfer' and not bank_account:
                 # Xử lý tài khoản ngân hàng mới
@@ -125,26 +144,24 @@ def deposit_money(request):
                     messages.error(request, 'Vui lòng chọn hoặc thêm tài khoản ngân hàng để tiếp tục nạp tiền.')
                     return redirect('deposit_money')
             
-            # Tạo giao dịch nạp tiền
-            transaction = WalletTransaction.objects.create(
-                user=request.user,
-                wallet=wallet,
-                type='deposit',
-                amount=amount,
-                fee=0,  # Miễn phí nạp tiền
-                net_amount=amount,
-                status='completed',  # Trạng thái hoàn thành thay vì pending
-                bank_account=bank_account,
-                payment_method=payment_method,
-                transaction_id=f"DEP{uuid.uuid4().hex[:8].upper()}",
-                notes=f"Nạp tiền qua {dict(WalletTransaction.PAYMENT_METHOD_CHOICES)[payment_method]}"
-            )
+            # Sử dụng transaction.atomic để đảm bảo tính toàn vẹn dữ liệu
+            with transaction.atomic():
+                # Tạo giao dịch nạp tiền
+                transaction_obj = WalletTransaction.objects.create(
+                    user=request.user,
+                    wallet=wallet,
+                    type='deposit',
+                    amount=amount,
+                    fee=0,  # Miễn phí nạp tiền
+                    net_amount=amount,
+                    status='completed',  # Trạng thái hoàn thành thay vì pending
+                    bank_account=bank_account,
+                    payment_method=payment_method,
+                    transaction_id=transaction_id,
+                    notes=f"Nạp tiền qua {dict(WalletTransaction.PAYMENT_METHOD_CHOICES)[payment_method]}"
+                )
             
-            # Cập nhật số dư ví
-            wallet.balance += amount
-            wallet.save()
-            
-            messages.success(request, f'Nạp tiền thành công! Số dư của bạn đã được cập nhật: {wallet.balance} VNĐ')
+            messages.success(request, f'Nạp tiền thành công! Số dư của bạn đã được cập nhật: {dinh_dang_tien(wallet.balance)} VNĐ với thông tin Balance Information<br>Số dư khả dụng: {dinh_dang_tien(wallet.balance)} VNĐ')
             return redirect('wallet')
         else:
             print("Form is invalid")
@@ -216,35 +233,50 @@ def withdraw_money(request):
                     messages.error(request, 'Vui lòng chọn hoặc thêm tài khoản ngân hàng để tiếp tục rút tiền.')
                     return redirect('withdraw_money')
             
-            # Tính phí rút tiền (0.5%, tối thiểu 10,000, tối đa 50,000)
-            fee = round(float(amount) * 0.005)
-            if fee < 10000:
-                fee = 10000
-            if fee > 50000:
-                fee = 50000
+            # Không tính phí rút tiền
+            fee = 0
+            net_amount = amount
             
-            net_amount = amount - fee
+            # Tạo transaction_id duy nhất để tránh giao dịch trùng lặp
+            transaction_id = f"WIT{uuid.uuid4().hex[:8].upper()}"
             
-            # Tạo giao dịch rút tiền
-            transaction = WalletTransaction.objects.create(
+            # Kiểm tra xem giao dịch có trùng lặp không (trong vòng 5 phút gần đây)
+            five_minutes_ago = timezone.now() - timedelta(minutes=5)
+            recent_withdrawals = WalletTransaction.objects.filter(
                 user=request.user,
-                wallet=wallet,
                 type='withdraw',
                 amount=amount,
-                fee=fee,
-                net_amount=net_amount,
-                status='completed',  # Trạng thái hoàn thành thay vì pending
-                bank_account=bank_account,
-                payment_method='bank_transfer',
-                transaction_id=f"WIT{uuid.uuid4().hex[:8].upper()}",
-                notes=withdraw_note
+                created_at__gte=five_minutes_ago
             )
             
-            # Cập nhật số dư ví
-            wallet.balance -= amount
-            wallet.save()
+            if recent_withdrawals.exists():
+                messages.warning(request, 'Một giao dịch rút tiền tương tự đã được thực hiện trong vòng 5 phút qua. Vui lòng đợi một lát và kiểm tra số dư của bạn trước khi thử lại.')
+                return redirect('wallet')
             
-            messages.success(request, f'Rút tiền thành công! Số dư còn lại của bạn: {wallet.balance} VNĐ')
+            # Sử dụng transaction.atomic để đảm bảo tính toàn vẹn dữ liệu
+            with transaction.atomic():
+                # Tạo giao dịch rút tiền
+                transaction_obj = WalletTransaction.objects.create(
+                    user=request.user,
+                    wallet=wallet,
+                    type='withdraw',
+                    amount=amount,
+                    fee=fee,
+                    net_amount=net_amount,
+                    status='completed',  # Trạng thái hoàn thành thay vì pending
+                    bank_account=bank_account,
+                    payment_method='bank_transfer',
+                    transaction_id=transaction_id,
+                    notes=withdraw_note
+                )
+            
+            messages.success(
+                request, 
+                f'Rút tiền thành công! '
+                f'<br>Số tiền rút: {dinh_dang_tien(amount)} VNĐ'
+                f'<br>Số tiền thực nhận: {dinh_dang_tien(net_amount)} VNĐ'
+                f'<br>Số dư còn lại: {dinh_dang_tien(wallet.balance)} VNĐ'
+            )
             return redirect('wallet')
         else:
             for field, errors in form.errors.items():

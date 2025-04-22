@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
-from .models import Portfolio, Asset, Transaction, PortfolioAsset, User
+from .models import Portfolio, Asset, Transaction, PortfolioAsset, User, Wallet
 from .forms import PortfolioForm, AssetForm, TransactionForm, UserRegistrationForm, UserProfileForm
 from django.contrib.auth import login, logout
 from decimal import Decimal
@@ -54,6 +54,9 @@ def dashboard(request):
     recent_transactions = Transaction.objects.filter(
         portfolio__user=request.user
     ).order_by('-transaction_date')[:5]
+    
+    # Get wallet for displaying balance on dashboard
+    wallet, created = Wallet.objects.get_or_create(user=request.user)
 
     context = {
         'portfolios': portfolios,
@@ -62,6 +65,7 @@ def dashboard(request):
         'total_assets': total_assets,
         'monthly_transactions': monthly_transactions,
         'recent_transactions': recent_transactions,
+        'wallet': wallet,
     }
     return render(request, 'portfolio/dashboard.html', context)
 
@@ -149,45 +153,46 @@ def portfolio_update(request, pk):
 
 @login_required
 def asset_list(request):
-    # Get all assets with additional portfolio data
-    assets = Asset.objects.all()
+    # Get portfolio assets that user actually owns (quantity > 0)
+    portfolio_assets = PortfolioAsset.objects.filter(
+        portfolio__user=request.user,
+        quantity__gt=0
+    ).select_related('asset')
+    
+    # Get unique assets from portfolio assets
+    owned_asset_ids = portfolio_assets.values_list('asset_id', flat=True).distinct()
+    owned_assets = Asset.objects.filter(id__in=owned_asset_ids)
     
     # Calculate total values and add portfolio-related attributes to each asset
     assets_with_data = []
-    for asset in assets:
-        # Get portfolio asset data if it exists
-        portfolio_assets = PortfolioAsset.objects.filter(asset=asset)
+    
+    for asset in owned_assets:
+        # Get portfolio asset data for this asset across all portfolios
+        asset_portfolio_items = portfolio_assets.filter(asset=asset)
         
-        if portfolio_assets.exists():
-            # Sum quantities and calculate weighted average price
-            total_quantity = sum(pa.quantity for pa in portfolio_assets)
-            total_cost = sum(pa.quantity * pa.average_price for pa in portfolio_assets)
-            average_price = total_cost / total_quantity if total_quantity > 0 else 0
-            
-            # Calculate current value and profit/loss
-            current_value = total_quantity * asset.current_price
-            profit_loss = current_value - total_cost
-            profit_loss_percent = (profit_loss / total_cost * 100) if total_cost > 0 else 0
-            
-            # Add data to asset
-            asset.quantity = total_quantity
-            asset.average_price = average_price
-            asset.total_value = current_value
-            asset.profit_loss = profit_loss
-            asset.profit_loss_percent = profit_loss_percent
-        else:
-            # No portfolio data for this asset
-            asset.quantity = 0
-            asset.average_price = 0
-            asset.total_value = 0
-            asset.profit_loss = 0
-            asset.profit_loss_percent = 0
+        # Sum quantities and calculate weighted average price
+        total_quantity = sum(pa.quantity for pa in asset_portfolio_items)
+        total_cost = sum(pa.quantity * pa.average_price for pa in asset_portfolio_items)
+        average_price = total_cost / total_quantity if total_quantity > 0 else 0
+        
+        # Calculate current value and profit/loss
+        current_value = total_quantity * asset.current_price
+        profit_loss = current_value - total_cost
+        profit_loss_percent = (profit_loss / total_cost * 100) if total_cost > 0 else 0
+        
+        # Add data to asset
+        asset.quantity = total_quantity
+        asset.average_price = average_price
+        asset.total_value = current_value
+        asset.profit_loss = profit_loss
+        asset.profit_loss_percent = profit_loss_percent
         
         assets_with_data.append(asset)
     
     # Calculate portfolio totals
     total_investment = sum(asset.quantity * asset.average_price for asset in assets_with_data)
     total_current_value = sum(asset.quantity * asset.current_price for asset in assets_with_data)
+    print(f"DEBUG: Total investment: {total_investment}, Total current value: {total_current_value}")
     total_profit_loss = total_current_value - total_investment
     total_profit_loss_percent = (total_profit_loss / total_investment * 100) if total_investment > 0 else 0
     

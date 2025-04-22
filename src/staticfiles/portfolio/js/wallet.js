@@ -22,7 +22,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const momoSection = document.getElementById('momoSection');
     const vnpaySection = document.getElementById('vnpaySection');
     
+    // Các trường VNPay
+    const fullNameField = document.getElementById('fullName');
+    const emailField = document.getElementById('email');
+    
+    // Hàm xử lý việc bật/tắt các trường dựa trên phương thức thanh toán
+    function toggleRequiredFields() {
+        // Nếu đang sử dụng VNPay, bật required cho các trường VNPay
+        if (fullNameField && emailField) {
+            if (vnpaySection && !vnpaySection.classList.contains('d-none')) {
+                fullNameField.disabled = false;
+                emailField.disabled = false;
+            } else {
+                fullNameField.disabled = true;
+                emailField.disabled = true;
+            }
+        }
+    }
+    
     if (paymentMethods && paymentMethods.length > 0) {
+        // Mặc định ẩn các trường khi trang tải
+        toggleRequiredFields();
+        
         paymentMethods.forEach(method => {
             method.addEventListener('change', function() {
                 // Ẩn tất cả các phương thức
@@ -38,6 +59,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (this.value === 'vnpay' && vnpaySection) {
                     vnpaySection.classList.remove('d-none');
                 }
+                
+                // Cập nhật các trường required
+                toggleRequiredFields();
             });
         });
     }
