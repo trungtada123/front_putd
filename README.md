@@ -114,3 +114,92 @@ DATABASE_PORT=5432
 ```
 Hệ thống sẽ chạy tại `http://127.0.0.1:8000/`.
 
+
+## Thiết lập dữ liệu cổ phiếu sau khi clone repository
+
+Sau khi clone repository và cấu hình cơ sở dữ liệu, bạn cần thêm dữ liệu cổ phiếu để chức năng mua/bán hoạt động:
+
+### Cách 1: Đồng bộ dữ liệu từ VNStock (khuyên dùng)
+
+```bash
+python manage.py shell
+```
+
+```python
+from portfolio.vnstock_services import sync_vnstock_to_assets_fixed
+
+def sync_vnstock_to_assets_fixed():
+    """Đồng bộ dữ liệu từ vnstock vào model Asset - fixed version"""
+    from portfolio.models import Asset
+    from vnstock import Vnstock
+    import pandas as pd
+    from datetime import datetime
+    
+    try:
+        # Khởi tạo vnstock instance
+        vnstock_instance = Vnstock()
+        stock = vnstock_instance.stock(symbol='VN30', source='VCI')
+        
+        # Lấy danh sách cổ phiếu
+        symbols_df = stock.listing.all_symbols()
+        print(f"Đã tìm thấy {len(symbols_df)} cổ phiếu")
+        
+        # Lấy tất cả mã cổ phiếu
+        symbols = symbols_df['symbol'].tolist()
+        
+        created_count = 0
+        updated_count = 0
+        error_count = 0
+        
+        # Thêm cổ phiếu vào database
+        for symbol in symbols:
+            try:
+                # Lấy thông tin từ dataframe
+                symbol_info = symbols_df[symbols_df['symbol'] == symbol]
+                
+                if not symbol_info.empty:
+                    name = symbol_info['organ_name'].iloc[0]
+                    
+                    # Cập nhật hoặc tạo mới
+                    asset, created = Asset.objects.update_or_create(
+                        symbol=symbol,
+                        defaults={
+                            'name': name or f"Cổ phiếu {symbol}",  # Đảm bảo name không bị null
+                            'type': 'stock',
+                            'sector': 'Unknown',
+                            'current_price': 10000,  # Giá mặc định
+                            'description': f"Imported from VNStock"
+                        }
+                    )
+                    
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+                    
+                    # In tiến độ
+                    if (created_count + updated_count) % 100 == 0:
+                        print(f"Đã xử lý {created_count + updated_count}/{len(symbols)} cổ phiếu")
+            
+            except Exception as e:
+                error_count += 1
+                print(f"Lỗi khi xử lý mã {symbol}: {str(e)}")
+        
+        # Kết quả
+        result = {
+            'created': created_count,
+            'updated': updated_count,
+            'errors': error_count,
+            'total': created_count + updated_count
+        }
+        print(f"Kết quả: {result}")
+        return result
+        
+    except Exception as e:
+        print(f"Lỗi: {str(e)}")
+        return {'created': 0, 'updated': 0, 'errors': 1, 'total': 0}
+
+# Chạy function
+result = sync_vnstock_to_assets_fixed()
+print(result)
+exit()
