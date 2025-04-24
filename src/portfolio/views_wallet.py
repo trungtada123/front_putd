@@ -20,6 +20,53 @@ def wallet(request):
     # Lấy hoặc tạo ví cho người dùng
     wallet, created = Wallet.objects.get_or_create(user=request.user)
     
+    # Hiển thị thông báo về các giao dịch rút tiền đã được xử lý mà người dùng chưa xem
+    # Lấy các giao dịch rút tiền đã hoàn thành và chưa được đánh dấu là đã thông báo
+    completed_withdrawals = WalletTransaction.objects.filter(
+        user=request.user,
+        type='withdraw',
+        status='completed',
+        completed_at__isnull=False,
+    ).exclude(
+        notes__icontains='đã thông báo'
+    ).order_by('-completed_at')[:5]  # Lấy 5 giao dịch gần nhất
+    
+    # Hiển thị thông báo cho từng giao dịch
+    for withdrawal in completed_withdrawals:
+        messages.success(
+            request,
+            f'Yêu cầu rút tiền #{withdrawal.transaction_id} của bạn đã được phê duyệt! '
+            f'<br>Số tiền rút: {dinh_dang_tien(withdrawal.amount)} VNĐ'
+            f'<br>Phí giao dịch: {dinh_dang_tien(withdrawal.fee)} VNĐ'
+            f'<br>Số tiền thực nhận: {dinh_dang_tien(withdrawal.net_amount)} VNĐ'
+            f'<br>Thời gian xử lý: {timezone.localtime(withdrawal.completed_at).strftime("%H:%M %d-%m-%Y")}'
+        )
+        # Đánh dấu là đã thông báo
+        withdrawal.notes = f"{withdrawal.notes or ''} | đã thông báo"
+        withdrawal.save(update_fields=['notes'])
+    
+    # Hiển thị thông báo cho các giao dịch bị từ chối
+    rejected_withdrawals = WalletTransaction.objects.filter(
+        user=request.user,
+        type='withdraw',
+        status='failed',
+        updated_at__isnull=False,
+    ).exclude(
+        notes__icontains='đã thông báo'
+    ).order_by('-updated_at')[:5]
+    
+    for withdrawal in rejected_withdrawals:
+        messages.error(
+            request,
+            f'Yêu cầu rút tiền #{withdrawal.transaction_id} của bạn đã bị từ chối. '
+            f'<br>Số tiền rút: {dinh_dang_tien(withdrawal.amount)} VNĐ'
+            f'<br>Thời gian xử lý: {timezone.localtime(withdrawal.updated_at).strftime("%H:%M %d-%m-%Y")}'
+            f'<br>Lý do: {withdrawal.notes if "Từ chối" in withdrawal.notes else "Không đáp ứng điều kiện rút tiền"}'
+        )
+        # Đánh dấu là đã thông báo
+        withdrawal.notes = f"{withdrawal.notes or ''} | đã thông báo"
+        withdrawal.save(update_fields=['notes'])
+    
     # Lấy các giao dịch gần đây
     transactions = WalletTransaction.objects.filter(user=request.user).order_by('-created_at')[:5]
     
@@ -326,6 +373,12 @@ def withdraw_money(request):
     # Lấy danh sách tài khoản ngân hàng
     bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
     
+    # Số dư tối thiểu để rút tiền (50,000 VND)
+    MINIMUM_BALANCE = Decimal('50000')
+    
+    # Phí cố định cho mỗi giao dịch rút tiền (10,000 VND)
+    WITHDRAWAL_FEE = Decimal('10000')
+    
     if request.method == 'POST':
         form = WithdrawForm(request.user, request.POST)
         if form.is_valid():
@@ -334,9 +387,23 @@ def withdraw_money(request):
             bank_account = form.cleaned_data.get('bank_account')
             withdraw_note = form.cleaned_data.get('notes', '')
             
-            # Kiểm tra số dư
+            # Tính phí rút tiền và số tiền thực nhận
+            fee = WITHDRAWAL_FEE
+            net_amount = amount - fee
+            
+            # Kiểm tra số tiền rút hợp lệ (sau khi trừ phí phải > 0)
+            if net_amount <= 0:
+                messages.error(request, f'Số tiền rút phải lớn hơn phí giao dịch ({dinh_dang_tien(WITHDRAWAL_FEE)} VNĐ).')
+                return redirect('withdraw_money')
+            
+            # Kiểm tra số dư - phải đảm bảo đủ rút và đảm bảo số dư còn lại trên mức tối thiểu
             if amount > wallet.balance:
                 messages.error(request, 'Số dư của bạn không đủ để thực hiện giao dịch này.')
+                return redirect('withdraw_money')
+            
+            # Kiểm tra số dư còn lại sau khi rút phải lớn hơn hoặc bằng số dư tối thiểu
+            if (wallet.balance - amount) < MINIMUM_BALANCE:
+                messages.error(request, f'Số dư còn lại sau khi rút phải lớn hơn hoặc bằng {dinh_dang_tien(MINIMUM_BALANCE)} VNĐ.')
                 return redirect('withdraw_money')
             
             # Nếu không chọn tài khoản nào
@@ -371,10 +438,6 @@ def withdraw_money(request):
                     messages.error(request, 'Vui lòng chọn hoặc thêm tài khoản ngân hàng để tiếp tục rút tiền.')
                     return redirect('withdraw_money')
             
-            # Không tính phí rút tiền
-            fee = 0
-            net_amount = amount
-            
             # Tạo transaction_id duy nhất để tránh giao dịch trùng lặp
             transaction_id = f"WIT{uuid.uuid4().hex[:8].upper()}"
             
@@ -393,15 +456,15 @@ def withdraw_money(request):
             
             # Sử dụng transaction.atomic để đảm bảo tính toàn vẹn dữ liệu
             with transaction.atomic():
-                # Tạo giao dịch rút tiền
+                # Tạo giao dịch rút tiền với trạng thái 'pending' - chờ admin phê duyệt
                 transaction_obj = WalletTransaction.objects.create(
                     user=request.user,
                     wallet=wallet,
                     type='withdraw',
-                    amount=amount,  # amount đã là Decimal từ form.cleaned_data
-                    fee=Decimal(fee),
-                    net_amount=amount,  # net_amount đã là Decimal từ form.cleaned_data
-                    status='completed',  # Trạng thái hoàn thành thay vì pending
+                    amount=amount,
+                    fee=fee,
+                    net_amount=net_amount,
+                    status='pending', # Thay đổi trạng thái thành 'pending' thay vì 'completed'
                     bank_account=bank_account,
                     payment_method='bank_transfer',
                     transaction_id=transaction_id,
@@ -410,10 +473,12 @@ def withdraw_money(request):
             
             messages.success(
                 request, 
-                f'Rút tiền thành công! '
+                f'Yêu cầu rút tiền đã được gửi đi và đang chờ xét duyệt! '
                 f'<br>Số tiền rút: {dinh_dang_tien(amount)} VNĐ'
+                f'<br>Phí giao dịch: {dinh_dang_tien(fee)} VNĐ'
                 f'<br>Số tiền thực nhận: {dinh_dang_tien(net_amount)} VNĐ'
-                f'<br>Số dư còn lại: {dinh_dang_tien(wallet.balance)} VNĐ'
+                f'<br>Số dư hiện tại: {dinh_dang_tien(wallet.balance)} VNĐ'
+                f'<br>Trạng thái: Đang chờ xử lý'
             )
             return redirect('wallet')
         else:
@@ -426,7 +491,9 @@ def withdraw_money(request):
     context = {
         'wallet': wallet,
         'bank_accounts': bank_accounts,
-        'form': form
+        'form': form,
+        'minimum_balance': MINIMUM_BALANCE,
+        'withdrawal_fee': WITHDRAWAL_FEE
     }
     
     return render(request, 'portfolio/withdraw.html', context)
