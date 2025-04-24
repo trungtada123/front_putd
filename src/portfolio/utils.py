@@ -72,3 +72,31 @@ def get_ai_response(message):
     
     except Exception as e:
         return f"Đã xảy ra lỗi: {str(e)}" 
+
+def generate_qr_code(amount, transaction_id, username=None):
+    """
+    Tạo QR code VietQR cho giao dịch chuyển khoản ngân hàng
+    
+    Args:
+        amount (float): Số tiền cần chuyển khoản
+        transaction_id (str): Mã giao dịch để ghi trong nội dung chuyển khoản
+        username (str, optional): Tên người dùng để thêm vào nội dung chuyển khoản
+        
+    Returns:
+        str: URL của hình ảnh QR code
+    """
+    # Thông tin ngân hàng mặc định (MB Bank)
+    BANK_ID = "MB"
+    ACCOUNT_NO = "0967720844"
+    
+    # Tạo nội dung chuyển khoản bao gồm mã giao dịch, số tiền và tên người dùng
+    transfer_content = transaction_id
+    if amount:
+        transfer_content += f" {amount}"
+    if username:
+        transfer_content += f" {username}"
+    
+    # Tạo URL QR code từ VietQR
+    qr_url = f"https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-compact2.png?amount={amount}&addInfo={transfer_content}"
+    
+    return qr_url 

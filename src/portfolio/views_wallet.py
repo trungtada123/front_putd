@@ -7,65 +7,69 @@ from django.core.paginator import Paginator
 from datetime import timedelta
 import uuid
 from django.db import transaction
+from django.utils.formats import date_format
 
 from .models import Wallet, BankAccount, WalletTransaction
 from .forms import BankAccountForm, DepositForm, WithdrawForm
 from .templatetags.currency_filters import dinh_dang_tien
+from .utils import generate_qr_code
 
 @login_required
 def wallet(request):
     # Lấy hoặc tạo ví cho người dùng
     wallet, created = Wallet.objects.get_or_create(user=request.user)
     
-    # Lấy danh sách tài khoản ngân hàng
-    bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    # Lấy các giao dịch gần đây
+    transactions = WalletTransaction.objects.filter(user=request.user).order_by('-created_at')[:5]
     
-    # Lấy giao dịch gần đây
-    transactions = WalletTransaction.objects.filter(user=request.user).order_by('-created_at')
+    # Các thống kê
+    transaction_type = request.GET.get('type', None)
+    from_date = request.GET.get('from_date', None)
+    to_date = request.GET.get('to_date', None)
     
-    # Lọc giao dịch theo loại nếu có tham số trong query
-    transaction_type = request.GET.get('type')
+    # Bộ lọc
+    filter_params = {'user': request.user}
     if transaction_type in ['deposit', 'withdraw']:
-        transactions = transactions.filter(type=transaction_type)
+        filter_params['type'] = transaction_type
     
-    # Phân trang giao dịch
-    paginator = Paginator(transactions, 10)  # 10 giao dịch mỗi trang
-    page_number = request.GET.get('page')
-    paged_transactions = paginator.get_page(page_number)
+    if from_date:
+        filter_params['created_at__gte'] = from_date
     
-    # Tính tổng nạp/rút
-    thirty_days_ago = timezone.now() - timedelta(days=30)
+    if to_date:
+        filter_params['created_at__lte'] = to_date
     
+    # Tính tổng nạp và rút
     total_deposit = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='deposit', 
+        user=request.user,
+        type='deposit',
         status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
     total_withdraw = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='withdraw', 
+        user=request.user,
+        type='withdraw',
         status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
+    # Tính tổng nạp và rút trong 30 ngày gần đây
+    thirty_days_ago = timezone.now() - timedelta(days=30)
     monthly_deposit = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='deposit', 
-        status='completed',
-        created_at__gte=thirty_days_ago
-    ).aggregate(total=Sum('amount'))['total'] or 0
+        user=request.user,
+        type='deposit',
+        created_at__gte=thirty_days_ago,
+        status='completed'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
     monthly_withdraw = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='withdraw', 
-        status='completed',
-        created_at__gte=thirty_days_ago
-    ).aggregate(total=Sum('amount'))['total'] or 0
+        user=request.user,
+        type='withdraw',
+        created_at__gte=thirty_days_ago,
+        status='completed'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
     context = {
         'wallet': wallet,
-        'bank_accounts': bank_accounts,
-        'transactions': paged_transactions,
+        'transactions': transactions,
         'total_deposit': total_deposit,
         'total_withdraw': total_withdraw,
         'monthly_deposit': monthly_deposit,
@@ -82,6 +86,19 @@ def deposit_money(request):
     # Lấy danh sách tài khoản ngân hàng
     bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
     
+    # Tạo transaction_id duy nhất
+    transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
+    
+    # Mặc định amount
+    default_amount = 100000
+    
+    # Tạo URL mã QR VietQR
+    qr_code_url = generate_qr_code(
+        amount=default_amount,
+        transaction_id=transaction_id,
+        username=request.user.username
+    )
+    
     if request.method == 'POST':
         print("POST request received for deposit_money")
         print("POST data:", request.POST)
@@ -94,9 +111,6 @@ def deposit_money(request):
             payment_method = form.cleaned_data['payment_method']
             bank_account = form.cleaned_data.get('bank_account')
             agree_terms = form.cleaned_data['agree_terms']
-            
-            # Tạo transaction_id duy nhất để tránh giao dịch trùng lặp
-            transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
             
             # Kiểm tra xem giao dịch có trùng lặp không (trong vòng 5 phút gần đây)
             five_minutes_ago = timezone.now() - timedelta(minutes=5)
@@ -169,13 +183,23 @@ def deposit_money(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{error}")
+            
+            # Nếu có amount trong form không hợp lệ, tạo lại mã QR với amount từ form
+            amount = request.POST.get('amount', default_amount)
+            qr_code_url = generate_qr_code(
+                amount=amount,
+                transaction_id=transaction_id,
+                username=request.user.username
+            )
     else:
         form = DepositForm(request.user)
     
     context = {
         'wallet': wallet,
         'bank_accounts': bank_accounts,
-        'form': form
+        'form': form,
+        'qr_code_url': qr_code_url,
+        'transaction_id': transaction_id
     }
     
     return render(request, 'portfolio/deposit.html', context)

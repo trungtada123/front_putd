@@ -67,19 +67,43 @@
         // Set up event listeners
         const amountInput = document.getElementById('amount');
         if (amountInput) {
-            amountInput.addEventListener('change', updateQRCodes);
-            amountInput.addEventListener('input', updateQRCodes);
-            
             // Update amount display in transaction info sidebar
             amountInput.addEventListener('input', function() {
+                // Định dạng số tiền với dấu phẩy ngăn cách hàng nghìn
+                const formattedAmount = new Intl.NumberFormat('vi-VN').format(this.value) + ' VNĐ';
+                
+                // Cập nhật tất cả các phần tử hiển thị số tiền
                 document.querySelectorAll('.amount-display').forEach(el => {
-                    el.textContent = new Intl.NumberFormat('vi-VN').format(this.value) + ' VNĐ';
+                    el.textContent = formattedAmount;
                 });
+                
+                // Cập nhật mã QR sau một khoảng thời gian ngắn (để tránh cập nhật liên tục)
+                clearTimeout(qrUpdateTimeout);
+                qrUpdateTimeout = setTimeout(updateQRCode, 1000);
             });
             
             // Trigger initial amount display
             document.querySelectorAll('.amount-display').forEach(el => {
                 el.textContent = new Intl.NumberFormat('vi-VN').format(amountInput.value) + ' VNĐ';
+            });
+        }
+        
+        // Xử lý nút cập nhật mã QR
+        const reloadQRBtn = document.getElementById('reloadQRBtn');
+        if (reloadQRBtn) {
+            reloadQRBtn.addEventListener('click', function() {
+                updateQRCode();
+            });
+        }
+        
+        // Cập nhật mã QR khi thay đổi số tiền (sau một khoảng thời gian)
+        let qrUpdateTimeout;
+        if (amountInput) {
+            amountInput.addEventListener('input', function() {
+                clearTimeout(qrUpdateTimeout);
+                qrUpdateTimeout = setTimeout(function() {
+                    updateQRCode();
+                }, 1000); // Đợi 1 giây sau khi người dùng ngừng nhập
             });
         }
         
@@ -110,9 +134,6 @@
                 
                 // Show corresponding section
                 handlePaymentMethodChange(radio.value);
-                
-                // Update QR codes after section is visible
-                setTimeout(updateQRCodes, 300);
                 
                 // Prevent default click behavior
                 e.preventDefault();
@@ -249,8 +270,6 @@
     function initializeQRCodes() {
         console.log("Initializing QR codes...");
         createQRContainer('bankTransferQR');
-        createQRContainer('momoQR');
-        createQRContainer('vnpayQR');
         updateQRCodes();
     }
     
@@ -266,8 +285,6 @@
         try {
             console.log("Updating QR codes...");
             generateBankTransferQR();
-            generateMomoQR();
-            generateVNPayQR();
         } catch (error) {
             console.error("Error generating QR codes:", error);
         }
@@ -288,28 +305,6 @@
         } else {
             console.error("Section not found:", method + 'Section');
         }
-        
-        // Toggle required fields
-        toggleRequiredFields(method);
-    }
-    
-    function toggleRequiredFields(method) {
-        const fullNameField = document.getElementById('fullName');
-        const emailField = document.getElementById('email');
-        
-        if (fullNameField && emailField) {
-            if (method === 'vnpay') {
-                fullNameField.disabled = false;
-                emailField.disabled = false;
-                fullNameField.required = true;
-                emailField.required = true;
-            } else {
-                fullNameField.disabled = true;
-                emailField.disabled = true;
-                fullNameField.required = false;
-                emailField.required = false;
-            }
-        }
     }
     
     function generateBankTransferQR() {
@@ -323,34 +318,6 @@
         } catch (error) {
             console.error("Error in bank transfer QR:", error);
             showQRError('bankTransferQR');
-        }
-    }
-    
-    function generateMomoQR() {
-        try {
-            const amount = document.getElementById('amount')?.value || 100000;
-            const username = '{{ request.user.username }}';
-            // Make QR content shorter
-            const qrContent = `MOMO|0987654321|NAP ${username}|${amount}`;
-            
-            generateQR('momoQR', qrContent, "#ae2070");
-        } catch (error) {
-            console.error("Error in MoMo QR:", error);
-            showQRError('momoQR');
-        }
-    }
-    
-    function generateVNPayQR() {
-        try {
-            const amount = document.getElementById('amount')?.value || 100000;
-            const username = '{{ request.user.username }}';
-            // Make QR content shorter
-            const qrContent = `VNPAY|NAP ${username}|${amount}`;
-            
-            generateQR('vnpayQR', qrContent, "#004a9c");
-        } catch (error) {
-            console.error("Error in VNPay QR:", error);
-            showQRError('vnpayQR');
         }
     }
     
@@ -407,6 +374,32 @@
             alert('Unable to download QR code');
         }
     }
+    
+    function updateQRCode() {
+        const amount = document.getElementById('amount')?.value || 100000;
+        const qrImg = document.querySelector('.text-center.mb-4 img');
+        const transactionId = "{{ transaction_id }}";
+        const username = "{{ request.user.username }}";
+        
+        if (qrImg) {
+            // Cập nhật nội dung chuyển khoản
+            const transferContent = `${transactionId} ${amount} ${username}`;
+            const transferContentEl = document.querySelector('.transfer-content');
+            if (transferContentEl) {
+                transferContentEl.textContent = transferContent;
+            }
+            
+            // Cập nhật URL mã QR - đảm bảo dùng số tiền hiện tại
+            const newUrl = `https://img.vietqr.io/image/MB-0967720844-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(transferContent)}`;
+            qrImg.src = newUrl;
+            
+            // Hiệu ứng loading
+            qrImg.style.opacity = '0.5';
+            setTimeout(() => {
+                qrImg.style.opacity = '1';
+            }, 500);
+        }
+    }
 </script>
 {% endblock %}
 
@@ -448,98 +441,44 @@
                     </div>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post" id="depositForm" action="{% url 'deposit_money' %}" novalidate>
+                    <form method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
                         
-                        {% if form.errors %}
-                        <div class="alert alert-danger rounded-4 mb-4">
-                            <div class="d-flex">
-                                <div class="me-3">
-                                    <i class="fas fa-exclamation-circle fa-2x"></i>
-                                </div>
-                                <div>
-                                    <h6 class="alert-heading">Lỗi xử lý form</h6>
-                                    <ul class="mb-0">
-                                        {% for field in form %}
-                                            {% for error in field.errors %}
-                                                <li>{{ field.label }}: {{ error }}</li>
-                                            {% endfor %}
-                                        {% endfor %}
-                                        {% for error in form.non_field_errors %}
-                                            <li>{{ error }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                        
+                        <!-- Amount field -->
                         <div class="mb-4">
                             <label for="amount" class="form-label">Số tiền muốn nạp <span class="text-danger">*</span></label>
                             <div class="input-group">
-                                <input type="number" name="amount" class="form-control form-control-lg" id="amount" min="50000" step="10000" value="{{ form.amount.value|default:'100000' }}" required>
+                                <input type="number" id="amount" name="amount" class="form-control form-control-lg" placeholder="Nhập số tiền" value="{{ form.amount.value|default:'100000' }}" min="10000" required>
                                 <span class="input-group-text">VNĐ</span>
                             </div>
-                            <div class="form-text">Số tiền tối thiểu: 50,000 VNĐ</div>
+                            {% if form.amount.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.amount.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Số tiền tối thiểu 10,000 VNĐ</div>
                         </div>
                         
-                        <!-- Form hidden field for actual payment method value -->
-                        <input type="hidden" id="actual_payment_method" name="payment_method" value="{{ form.payment_method.value|default:'bank_transfer' }}">
-
-                        <h5 class="mb-3">Chọn phương thức thanh toán</h5>
-                        
+                        <!-- Payment Methods -->
                         <div class="mb-4">
+                            <label class="form-label mb-3">Phương thức thanh toán <span class="text-danger">*</span></label>
+                            <input type="hidden" id="actual_payment_method" name="payment_method" value="bank_transfer">
+                            
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-md-12">
                                     <div class="form-check payment-method-card">
-                                        <input class="form-check-input payment-radio" type="radio" id="bankTransfer" value="bank_transfer" {% if form.payment_method.value == 'bank_transfer' or not form.payment_method.value %}checked{% endif %}>
+                                        <input class="form-check-input payment-radio" type="radio" id="bankTransfer" value="bank_transfer" checked>
                                         <label class="form-check-label w-100" for="bankTransfer">
-                                            <div class="card payment-option-card border shadow-sm rounded-4 p-3 {% if form.payment_method.value == 'bank_transfer' or not form.payment_method.value %}selected{% endif %}">
+                                            <div class="card payment-option-card border shadow-sm rounded-4 p-3 selected">
                                                 <div class="d-flex align-items-center">
-                                                    <div class="icon-circle bg-primary-light text-primary me-3">
+                                                    <div class="me-3">
                                                         <i class="fas fa-university"></i>
                                                     </div>
                                                     <div>
                                                         <h6 class="mb-1">Chuyển khoản</h6>
                                                         <div class="small text-muted">Miễn phí</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <div class="form-check payment-method-card">
-                                        <input class="form-check-input payment-radio" type="radio" id="momoPayment" value="momo" {% if form.payment_method.value == 'momo' %}checked{% endif %}>
-                                        <label class="form-check-label w-100" for="momoPayment">
-                                            <div class="card payment-option-card border shadow-sm rounded-4 p-3 {% if form.payment_method.value == 'momo' %}selected{% endif %}">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="me-3">
-                                                        <img src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" alt="MoMo" width="32" height="32">
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-1">MoMo</h6>
-                                                        <div class="small text-muted">Ví điện tử</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </label>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <div class="form-check payment-method-card">
-                                        <input class="form-check-input payment-radio" type="radio" id="vnpayPayment" value="vnpay" {% if form.payment_method.value == 'vnpay' %}checked{% endif %}>
-                                        <label class="form-check-label w-100" for="vnpayPayment">
-                                            <div class="card payment-option-card border shadow-sm rounded-4 p-3 {% if form.payment_method.value == 'vnpay' %}selected{% endif %}">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="me-3">
-                                                        <img src="https://vnpay.vn/s1/statics.vnpay.vn/2023/9/06ncktiwd6dc1694418196384.png" alt="VNPay" width="32" height="32">
-                                                    </div>
-                                                    <div>
-                                                        <h6 class="mb-1">VNPay</h6>
-                                                        <div class="small text-muted">QR Payment</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -563,15 +502,15 @@
                                             <div class="row">
                                                 <div class="col-md-6 mb-2">
                                                     <div class="small text-muted">Ngân hàng:</div>
-                                                    <div class="fw-bold">Techcombank</div>
+                                                    <div class="fw-bold">MB Bank</div>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
                                                     <div class="small text-muted">Chủ tài khoản:</div>
-                                                    <div class="fw-bold">CÔNG TY CP CHỨNG KHOÁN ...</div>
+                                                    <div class="fw-bold">CÔNG TY CP CHỨNG KHOÁN ASTROLUX</div>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
                                                     <div class="small text-muted">Số tài khoản:</div>
-                                                    <div class="fw-bold text-monospace">999999999999</div>
+                                                    <div class="fw-bold text-monospace">0967720844</div>
                                                 </div>
                                                 <div class="col-md-6 mb-2">
                                                     <div class="small text-muted">Chi nhánh:</div>
@@ -579,18 +518,61 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <p class="mb-0">Nội dung chuyển khoản: <span class="fw-bold">NAP {{ request.user.username }}</span></p>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- QR Code for Bank Transfer -->
                             <div class="text-center mb-4">
-                                <h6 class="mb-2">Quét mã QR để chuyển khoản nhanh</h6>
-                                <div id="bankTransferQR" class="mx-auto mb-2"></div>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="downloadQR('bankTransferQR')">
+                                <h5 class="mb-3 fw-bold text-primary"><i class="fas fa-qrcode me-2"></i>Quét mã QR để chuyển khoản nhanh</h5>
+                                {% if qr_code_url %}
+                                <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                                    <div class="row g-0">
+                                        <div class="col-md-5 bg-light d-flex align-items-center justify-content-center p-4">
+                                            <img src="{{ qr_code_url }}" alt="Mã QR chuyển khoản" class="img-fluid rounded shadow-sm" style="max-width: 220px;">
+                                        </div>
+                                        <div class="col-md-7">
+                                            <div class="card-body py-4">
+                                                <h6 class="card-title fw-bold mb-3 text-primary">Thông tin chuyển khoản</h6>
+                                                <div class="mb-3 border-bottom pb-2">
+                                                    <div class="row mb-2">
+                                                        <div class="col-5 text-muted">Ngân hàng:</div>
+                                                        <div class="col-7 fw-bold">MB Bank</div>
+                                                    </div>
+                                                    <div class="row mb-2">
+                                                        <div class="col-5 text-muted">Số tài khoản:</div>
+                                                        <div class="col-7 fw-bold font-monospace">0967720844</div>
+                                                    </div>
+                                                    <div class="row mb-2">
+                                                        <div class="col-5 text-muted">Số tiền:</div>
+                                                        <div class="col-7 fw-bold text-success">
+                                                            <span class="amount-display">{{ form.amount.value|default:'100000'|floatformat:0 }}</span> VNĐ
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-5 text-muted">Nội dung CK:</div>
+                                                        <div class="col-7 fw-bold font-monospace">
+                                                            <span class="small transfer-content">{{ transaction_id }} {{ form.amount.value|default:'100000' }} {{ request.user.username }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="btn btn-primary btn-sm rounded-pill px-3" id="reloadQRBtn">
+                                                    <i class="fas fa-sync-alt me-1"></i>Cập nhật mã QR
+                                                </button>
+                                                <div class="mt-2 small text-muted">
+                                                    <i class="fas fa-info-circle me-1"></i>
+                                                    Mã QR tự động cập nhật khi thay đổi số tiền
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div id="bankTransferQR" class="mx-auto mb-2 rounded shadow-sm" style="background-color: #f8f9fa; width: 220px; height: 220px; display: flex; align-items: center; justify-content: center;"></div>
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 mt-3" onclick="downloadQR('bankTransferQR')">
                                     <i class="fas fa-download me-1"></i>Tải mã QR
                                 </button>
+                                {% endif %}
                             </div>
                             
                             <!-- Bank Account Selection -->
@@ -700,7 +682,7 @@
                                                     {% endif %}
                                                 </div>
                                                 
-                                                <div class="mb-3 {% if form.new_bank_name.value != 'other' %}d-none{% endif %}" id="otherBankGroup">
+                                                <div id="otherBankGroup" class="mb-3 {% if form.new_bank_name.value != 'other' %}d-none{% endif %}">
                                                     <label for="new_other_bank_name" class="form-label">Tên ngân hàng khác <span class="text-danger">*</span></label>
                                                     <input type="text" name="new_other_bank_name" id="new_other_bank_name" class="form-control" value="{{ form.new_other_bank_name.value|default:'' }}">
                                                     {% if form.new_other_bank_name.errors %}
@@ -775,84 +757,6 @@
                             {% endif %}
                         </div>
                         
-                        <!-- MoMo Section -->
-                        <div id="momoSection" class="payment-section mb-4 d-none">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="alert alert-info rounded-4">
-                                        <div class="d-flex">
-                                            <div class="me-3">
-                                                <i class="fas fa-info-circle fa-2x"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="alert-heading">Hướng dẫn thanh toán MoMo</h6>
-                                                <ol class="mb-0">
-                                                    <li>Mở ứng dụng MoMo trên điện thoại</li>
-                                                    <li>Chọn "Quét mã" và quét mã QR bên cạnh</li>
-                                                    <li>Nhập số tiền: <span class="amount-display fw-bold">0</span></li>
-                                                    <li>Nhập tin nhắn: <span class="fw-bold">NAP {{ request.user.username }}</span></li>
-                                                    <li>Xác nhận thanh toán</li>
-                                                </ol>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6 text-center">
-                                    <h6 class="mb-3">Quét mã QR để thanh toán qua MoMo</h6>
-                                    <div id="momoQR" class="mx-auto mb-3"></div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="downloadQR('momoQR')">
-                                        <i class="fas fa-download me-1"></i>Tải mã QR
-                                    </button>
-                                    <p class="text-muted small mt-2">Mã QR có hiệu lực trong 15 phút</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- VNPay Section -->
-                        <div id="vnpaySection" class="payment-section mb-4 d-none">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="alert alert-info rounded-4">
-                                        <div class="d-flex">
-                                            <div class="me-3">
-                                                <i class="fas fa-info-circle fa-2x"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="alert-heading">Hướng dẫn thanh toán VNPay</h6>
-                                                <ol class="mb-0">
-                                                    <li>Mở ứng dụng ngân hàng có hỗ trợ VNPay</li>
-                                                    <li>Chọn tính năng "Quét mã QR"</li>
-                                                    <li>Quét mã QR bên cạnh</li>
-                                                    <li>Xác nhận thanh toán <span class="amount-display fw-bold">0</span></li>
-                                                    <li>Hoàn tất giao dịch</li>
-                                                </ol>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="fullName" class="form-label">Họ tên <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="fullName" name="fullname" value="{{ form.fullname.value|default:'' }}">
-                                    </div>
-                                    
-                                    <div class="mb-3">
-                                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                                        <input type="email" class="form-control" id="email" name="email" value="{{ form.email.value|default:'' }}">
-                                    </div>
-                                </div>
-                                
-                                <div class="col-md-6 text-center">
-                                    <h6 class="mb-3">Quét mã QR để thanh toán qua VNPay</h6>
-                                    <div id="vnpayQR" class="mx-auto mb-3"></div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="downloadQR('vnpayQR')">
-                                        <i class="fas fa-download me-1"></i>Tải mã QR
-                                    </button>
-                                    <p class="text-muted small mt-2">Mã QR có hiệu lực trong 15 phút</p>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="form-check mb-4">
                             <input class="form-check-input" type="checkbox" id="agreeTerms" name="agree_terms" required {% if form.agree_terms.value %}checked{% endif %}>
                             <label class="form-check-label" for="agreeTerms">
@@ -903,7 +807,7 @@
                             </div>
                             <div class="small">
                                 <strong>Thời gian xử lý:</strong>
-                                <p class="mb-0">Giao dịch MoMo/VNPay được xử lý ngay lập tức. Giao dịch chuyển khoản ngân hàng được xử lý trong vòng 24 giờ làm việc.</p>
+                                <p class="mb-0">Giao dịch chuyển khoản ngân hàng được xử lý trong vòng 24 giờ làm việc.</p>
                             </div>
                         </div>
                     </div>
