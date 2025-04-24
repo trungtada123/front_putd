@@ -1,69 +1,69 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# # Python
+# __pycache__/
+# *.py[cod]
+# *$py.class
+# *.so
+# .Python
 venv/
-ENV/
-env/
-env.bak/
-venv.bak/
-.env
+# ENV/
+# env/
+# env.bak/
+# venv.bak/
+# .env
 
-# Django
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media/
+# # Django
+# *.log
+# local_settings.py
+# db.sqlite3
+# db.sqlite3-journal
+# media/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
+# # # IDE
+# # .idea/
+# # .vscode/
+# # *.swp
+# # *.swo
 
-# OS specific
-.DS_Store
-Thumbs.db
-desktop.ini
+# # # OS specific
+# # .DS_Store
+# # Thumbs.db
+# # desktop.ini
 
-# Distribution / packaging
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg 
+# # # Distribution / packaging
+# # build/
+# # develop-eggs/
+# # dist/
+# # downloads/
+# # eggs/
+# # .eggs/
+# # lib/
+# # lib64/
+# # parts/
+# # sdist/
+# # var/
+# # wheels/
+# # *.egg-info/
+# # .installed.cfg
+# # *.egg 
 
-# Add the specified directory
-.demo\sur\static\portfolio\img
+# # Add the specified directory
+# .demo\sur\static\portfolio\img
 
-# Local development settings
-.env.*
-!.env.example
+# # Local development settings
+# .env.*
+# !.env.example
 
-# Database
-*.sqlite3
-*.db
+# # Database
+# *.sqlite3
+# *.db
 
-# Static and media files
-# /static/
-# /media/
-# /staticfiles/
+# # Static and media files
+# # /static/
+# # /media/
+# # /staticfiles/
 
-# Test coverage
-.coverage
-htmlcov/
+# # Test coverage
+# .coverage
+# htmlcov/
 
-# media/profile_pictures/*
+# # media/profile_pictures/*
