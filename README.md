@@ -1,3 +1,56 @@
+# Hệ thống Quản lý Danh mục Đầu tư
+
+Hệ thống quản lý danh mục đầu tư chứng khoán với các tính năng quản lý, phân tích và theo dõi danh mục cổ phiếu.
+
+## Yêu cầu hệ thống
+
+- Python 3.9+ 
+- PostgreSQL 12+
+- Các thư viện Python (xem file requirements.txt)
+
+## Lưu ý quan trọng khi clone repository
+
+Khi clone repository này, cần lưu ý một số vấn đề sau:
+
+1. **Cài đặt thư viện VNStock**: Dự án sử dụng thư viện `vnstock` để lấy thông tin cổ phiếu. Cần cài đặt thư viện này đúng phiên bản:
+   ```
+   pip install vnstock==3.1.0.2
+   ```
+
+2. **Tệp AstroBot**: Chatbot AstroBot sử dụng các tệp JavaScript và CSS đặc biệt. Đảm bảo các tệp sau được tải về đầy đủ:
+   - `src/static/portfolio/js/chat.js`
+   - `src/static/portfolio/css/chat-animations.css` 
+   - `src/static/portfolio/css/styles.css`
+   - `src/static/portfolio/img/astrobot.jpg`
+
+3. **Cấu hình PostgreSQL**: Đảm bảo PostgreSQL đã được cài đặt và cấu hình đúng theo thông số trong file `run.bat` hoặc `entrypoint.sh`.
+
+## Cài đặt
+
+1. Clone repository:
+   ```
+   git clone <url-repository>
+   ```
+
+2. Cài đặt các thư viện Python:
+   ```
+   pip install -r requirements.txt
+   ```
+
+3. Chạy script khởi tạo:
+   - Windows: Chạy file `run.bat`
+   - Linux/MacOS: Chạy file `entrypoint.sh`
+
+4. Truy cập ứng dụng:
+   - URL: http://localhost:8000
+
+## Các tính năng chính
+
+- Quản lý danh mục đầu tư
+- Thống kê và phân tích hiệu suất
+- Mua/bán cổ phiếu với dữ liệu thời gian thực
+- AstroBot hỗ trợ tư vấn đầu tư
+
 # Hệ Thống Quản Lý Danh Mục Đầu Tư
 
 - **Thành viên nhóm**
