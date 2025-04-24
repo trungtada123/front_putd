@@ -15,43 +15,15 @@
             
             <div class="card border-0 shadow-sm rounded-4" data-aos="fade-up">
                 <div class="card-body p-4 p-sm-5">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    
                     <form method="post">
                         {% csrf_token %}
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-floating mb-3">
-                                    <input type="text" name="first_name" class="form-control" id="id_first_name" placeholder="Họ">
-                                    <label for="id_first_name">Họ</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-floating mb-3">
-                                    <input type="text" name="last_name" class="form-control" id="id_last_name" placeholder="Tên">
-                                    <label for="id_last_name">Tên</label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-floating mb-3">
-                            <input type="text" name="username" class="form-control" id="id_username" placeholder="Tên đăng nhập" required>
-                            <label for="id_username">Tên đăng nhập</label>
-                        </div>
-                        
-                        <div class="form-floating mb-3">
-                            <input type="email" name="email" class="form-control" id="id_email" placeholder="Email" required>
-                            <label for="id_email">Email</label>
-                        </div>
-                        
-                        <div class="form-floating mb-3">
-                            <input type="password" name="password1" class="form-control" id="id_password1" placeholder="Mật khẩu" required>
-                            <label for="id_password1">Mật khẩu</label>
-                        </div>
-                        
-                        <div class="form-floating mb-4">
-                            <input type="password" name="password2" class="form-control" id="id_password2" placeholder="Xác nhận mật khẩu" required>
-                            <label for="id_password2">Xác nhận mật khẩu</label>
-                        </div>
+                        {{ form|crispy }}
                         
                         <div class="form-check mb-4">
                             <input class="form-check-input" type="checkbox" value="" id="termsCheck" required>

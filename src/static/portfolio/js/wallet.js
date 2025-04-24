@@ -192,7 +192,7 @@ function generateMomoQR() {
     const amount = amountInput.value || 0;
     const username = document.querySelector('meta[name="username"]')?.content || 'user';
     const phone = '0987654321'; // Số điện thoại MoMo của hệ thống
-    const qrContent = `2|99|${phone}|StockPortfolio|0|0|0|NAP ${username}|transfer_mo|${amount}`;
+    const qrContent = `2|99|${phone}|ASTROLUX|0|0|0|NAP ${username}|transfer_mo|${amount}`;
     
     const qrContainer = document.getElementById('momoQR');
     if (!qrContainer) return;
@@ -218,7 +218,7 @@ function generateVNPayQR() {
     const amount = amountInput.value || 0;
     const username = document.querySelector('meta[name="username"]')?.content || 'user';
     const merchantId = 'VNPAY12345'; // Mã đơn vị VNPay
-    const qrContent = `https://vnpayqr.vn/${merchantId}?amount=${amount}&addInfo=NAP ${username}&accountName=StockPortfolio`;
+    const qrContent = `https://vnpayqr.vn/${merchantId}?amount=${amount}&addInfo=NAP ${username}&accountName=ASTROLUX`;
     
     const qrContainer = document.getElementById('vnpayQR');
     if (!qrContainer) return;

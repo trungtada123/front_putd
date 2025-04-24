@@ -49,6 +49,8 @@ urlpatterns = [
     # API URLs
     path('api/historical-data/<str:symbol>/', views.get_historical_data_api, name='historical_data_api'),
     path('api/ai-chat/', views.ai_chat_api, name='ai_chat_api'),
+    path('api/stock-symbols/', views.get_stock_symbols, name='get_stock_symbols'),
+    path('api/stock-price/<str:symbol>/', views.get_stock_price, name='get_stock_price'),
     
     # Debug URLs
     path('debug/assets/', views.debug_assets, name='debug_assets'),

@@ -58,12 +58,12 @@ wheels/
 *.db
 
 # Static and media files
-/static/
-/media/
-/staticfiles/
+# /static/
+# /media/
+# /staticfiles/
 
 # Test coverage
 .coverage
 htmlcov/
 
-media/profile_pictures/*
+# media/profile_pictures/*
