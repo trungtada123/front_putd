@@ -8,11 +8,12 @@ from datetime import timedelta
 import uuid
 from django.db import transaction
 from django.utils.formats import date_format
+from decimal import Decimal
 
 from .models import Wallet, BankAccount, WalletTransaction
 from .forms import BankAccountForm, DepositForm, WithdrawForm
 from .templatetags.currency_filters import dinh_dang_tien
-from .utils import generate_qr_code
+from .utils import generate_qr_code, check_paid
 
 @login_required
 def wallet(request):
@@ -86,11 +87,15 @@ def deposit_money(request):
     # Lấy danh sách tài khoản ngân hàng
     bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
     
-    # Tạo transaction_id duy nhất
-    transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
+    # Comprueba si hay un transaction_id en el formulario
+    if request.method == 'POST' and 'transaction_id' in request.POST and request.POST.get('transaction_id'):
+        transaction_id = request.POST.get('transaction_id')
+    else:
+        # Tạo transaction_id duy nhất
+        transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
     
     # Mặc định amount
-    default_amount = 100000
+    default_amount = Decimal('100000')
     
     # Tạo URL mã QR VietQR
     qr_code_url = generate_qr_code(
@@ -99,7 +104,48 @@ def deposit_money(request):
         username=request.user.username
     )
     
-    if request.method == 'POST':
+    # Kiểm tra nếu có xác nhận nạp tiền
+    verification_result = None
+    if 'verify_deposit' in request.POST:
+        # Lấy thông tin giao dịch cần xác nhận
+        verify_transaction_id = request.POST.get('verify_transaction_id', transaction_id)
+        verify_amount = request.POST.get('verify_amount')
+        
+        # Log para depuración
+        print(f"Verificando depósito: ID={verify_transaction_id}, Monto={verify_amount}")
+        
+        if verify_transaction_id and verify_amount:
+            # Kiểm tra thông tin giao dịch
+            verification_result = check_paid(
+                transaction_id=verify_transaction_id,
+                amount=Decimal(verify_amount)
+            )
+            
+            # Nếu xác nhận thành công
+            if verification_result['success']:
+                # Tạo transaction_obj trong DB
+                with transaction.atomic():
+                    # Tạo giao dịch nạp tiền
+                    transaction_obj = WalletTransaction.objects.create(
+                        user=request.user,
+                        wallet=wallet,
+                        type='deposit',
+                        amount=Decimal(verify_amount),
+                        fee=0,  # Miễn phí nạp tiền
+                        net_amount=Decimal(verify_amount),
+                        status='completed',  # Trạng thái hoàn thành
+                        payment_method='bank_transfer',
+                        transaction_id=verify_transaction_id,
+                        notes=f"Nạp tiền xác nhận thủ công: {verification_result['message']}"
+                    )
+                
+                messages.success(request, verification_result['message'])
+                return redirect('wallet')
+            else:
+                messages.error(request, verification_result['message'])
+    
+    # Xử lý form deposit bình thường
+    if request.method == 'POST' and 'confirm_transfer' in request.POST:
         print("POST request received for deposit_money")
         print("POST data:", request.POST)
         
@@ -158,25 +204,22 @@ def deposit_money(request):
                     messages.error(request, 'Vui lòng chọn hoặc thêm tài khoản ngân hàng để tiếp tục nạp tiền.')
                     return redirect('deposit_money')
             
-            # Sử dụng transaction.atomic để đảm bảo tính toàn vẹn dữ liệu
-            with transaction.atomic():
-                # Tạo giao dịch nạp tiền
-                transaction_obj = WalletTransaction.objects.create(
-                    user=request.user,
-                    wallet=wallet,
-                    type='deposit',
+            # Chuyển sang trang xác nhận nạp tiền
+            context = {
+                'wallet': wallet,
+                'amount': amount,
+                'transaction_id': transaction_id,
+                'payment_method': payment_method,
+                'qr_code_url': generate_qr_code(
                     amount=amount,
-                    fee=0,  # Miễn phí nạp tiền
-                    net_amount=amount,
-                    status='completed',  # Trạng thái hoàn thành thay vì pending
-                    bank_account=bank_account,
-                    payment_method=payment_method,
                     transaction_id=transaction_id,
-                    notes=f"Nạp tiền qua {dict(WalletTransaction.PAYMENT_METHOD_CHOICES)[payment_method]}"
-                )
+                    username=request.user.username
+                ),
+                'bank_account': bank_account,
+                'verify_mode': True
+            }
             
-            messages.success(request, f'Nạp tiền thành công! Số dư của bạn đã được cập nhật: {dinh_dang_tien(wallet.balance)} VNĐ với thông tin Balance Information<br>Số dư khả dụng: {dinh_dang_tien(wallet.balance)} VNĐ')
-            return redirect('wallet')
+            return render(request, 'portfolio/deposit.html', context)
         else:
             print("Form is invalid")
             print("Form errors:", form.errors)
@@ -199,10 +242,81 @@ def deposit_money(request):
         'bank_accounts': bank_accounts,
         'form': form,
         'qr_code_url': qr_code_url,
-        'transaction_id': transaction_id
+        'transaction_id': transaction_id,
+        'verification_result': verification_result,
+        'verify_mode': False
     }
     
     return render(request, 'portfolio/deposit.html', context)
+
+@login_required
+def verify_deposit(request, transaction_id=None):
+    """View để kiểm tra giao dịch nạp tiền cuối cùng"""
+    if request.method != 'POST':
+        return redirect('deposit_money')
+        
+    # Lấy thông tin từ form
+    # Prioriza obtener el transaction_id del parámetro, luego del formulario
+    if not transaction_id:
+        # Usamos el campo oculto transaction_id si está presente
+        transaction_id = request.POST.get('transaction_id')
+        # Como fallback, usamos verify_transaction_id
+        if not transaction_id:
+            transaction_id = request.POST.get('verify_transaction_id')
+    
+    verify_transaction_id = transaction_id  # Aseguramos que se use el mismo ID
+    verify_amount = request.POST.get('verify_amount')
+    
+    if not verify_transaction_id or not verify_amount:
+        messages.error(request, "Vui lòng cung cấp đầy đủ mã giao dịch và số tiền để xác nhận nạp tiền")
+        return redirect('deposit_money')
+    
+    # Kiểm tra thông tin giao dịch
+    verification_result = check_paid(
+        transaction_id=verify_transaction_id,
+        amount=Decimal(verify_amount)
+    )
+    
+    # Log para depuración
+    print(f"Verificando transacción: ID={verify_transaction_id}, Monto={verify_amount}")
+    
+    # Lấy hoặc tạo ví cho người dùng
+    wallet, created = Wallet.objects.get_or_create(user=request.user)
+    
+    # Nếu xác nhận thành công
+    if verification_result['success']:
+        # Kiểm tra xem giao dịch này đã được xử lý chưa
+        if WalletTransaction.objects.filter(
+            user=request.user, 
+            transaction_id=verify_transaction_id, 
+            status='completed'
+        ).exists():
+            messages.warning(request, f"Giao dịch với mã {verify_transaction_id} đã được xử lý trước đó.")
+            return redirect('wallet')
+            
+        # Tạo transaction_obj trong DB
+        with transaction.atomic():
+            # Tạo giao dịch nạp tiền
+            transaction_obj = WalletTransaction.objects.create(
+                user=request.user,
+                wallet=wallet,
+                type='deposit',
+                amount=Decimal(verify_amount),
+                fee=0,  # Miễn phí nạp tiền
+                net_amount=Decimal(verify_amount),
+                status='completed',  # Trạng thái hoàn thành
+                payment_method='bank_transfer',
+                transaction_id=verify_transaction_id,
+                notes=f"Nạp tiền xác nhận thủ công: {verification_result['message']}"
+            )
+        
+        messages.success(request, verification_result['message'])
+        return redirect('wallet')
+    else:
+        messages.error(request, verification_result['message'])
+        
+    # Quay lại trang nạp tiền với kết quả xác nhận
+    return redirect('deposit_money')
 
 @login_required
 def withdraw_money(request):
@@ -284,9 +398,9 @@ def withdraw_money(request):
                     user=request.user,
                     wallet=wallet,
                     type='withdraw',
-                    amount=amount,
-                    fee=fee,
-                    net_amount=net_amount,
+                    amount=amount,  # amount đã là Decimal từ form.cleaned_data
+                    fee=Decimal(fee),
+                    net_amount=amount,  # net_amount đã là Decimal từ form.cleaned_data
                     status='completed',  # Trạng thái hoàn thành thay vì pending
                     bank_account=bank_account,
                     payment_method='bank_transfer',

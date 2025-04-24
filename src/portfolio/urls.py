@@ -38,6 +38,7 @@ urlpatterns = [
     # URLs cho ví điện tử
     path('wallet/', views_wallet.wallet, name='wallet'),
     path('wallet/deposit/', views_wallet.deposit_money, name='deposit_money'),
+    path('wallet/deposit/verify/', views_wallet.verify_deposit, name='verify_deposit'),
     path('wallet/withdraw/', views_wallet.withdraw_money, name='withdraw_money'),
     path('wallet/transactions/', views_wallet.wallet_transactions, name='wallet_transactions'),
     path('wallet/bank-accounts/', views_wallet.bank_account_list, name='bank_account_list'),
