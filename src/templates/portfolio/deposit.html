@@ -173,6 +173,34 @@
     .form-control:focus, .form-select:focus {
         box-shadow: 0 0 0 0.25rem rgba(var(--primary-color-rgb), 0.15) !important;
     }
+    
+    .input-focused .input-group-text {
+        box-shadow: 0 0 10px rgba(32, 201, 151, 0.3);
+    }
+    
+    /* Style cho input số tiền */
+    .amount-input-wrapper {
+        position: relative;
+    }
+    
+    .amount-input {
+        transition: all 0.3s ease;
+    }
+    
+    .amount-input:focus {
+        border-color: #20c997 !important;
+    }
+    
+    /* Animation hiệu ứng nhập số tiền */
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
+    }
+    
+    .amount-change-animation {
+        animation: pulse 0.5s ease;
+    }
 </style>
 {% endblock %}
 
@@ -215,6 +243,16 @@
         // Set up event listeners
         const amountInput = document.getElementById('amount');
         if (amountInput) {
+            // Thêm hiệu ứng cho input
+            amountInput.addEventListener('focus', function() {
+                this.style.boxShadow = "0 0 0 0.25rem rgba(32, 201, 151, 0.25)";
+                this.parentElement.classList.add('input-focused');
+            });
+            amountInput.addEventListener('blur', function() {
+                this.style.boxShadow = "";
+                this.parentElement.classList.remove('input-focused');
+            });
+            
             // Update amount display in transaction info sidebar
             amountInput.addEventListener('input', function() {
                 // Định dạng số tiền với dấu phẩy ngăn cách hàng nghìn
@@ -226,9 +264,17 @@
                     // Thêm hiệu ứng nhấp nháy khi số tiền thay đổi
                     el.style.transition = 'color 0.3s';
                     el.style.color = '#dc3545';
+                    
+                    // Thêm hiệu ứng pulse animation
+                    el.classList.add('amount-change-animation');
                     setTimeout(() => {
                         el.style.color = '#198754';
                     }, 300);
+                    
+                    // Xóa animation class sau khi hoàn thành để có thể thêm lại sau
+                    setTimeout(() => {
+                        el.classList.remove('amount-change-animation');
+                    }, 500);
                 });
                 
                 // Cập nhật mã QR sau một khoảng thời gian ngắn (để tránh cập nhật liên tục)
@@ -730,10 +776,24 @@
                         
                         <!-- Amount field -->
                         <div class="mb-4">
-                            <label for="amount" class="form-label">Số tiền muốn nạp <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <input type="number" id="amount" name="amount" class="form-control form-control-lg" placeholder="Nhập số tiền" value="{{ form.amount.value|default:'100000' }}" min="10000" required>
-                                <span class="input-group-text">VNĐ</span>
+                            <label for="amount" class="form-label fw-bold">
+                                <i class="fas fa-money-bill-wave text-primary me-2"></i>Số tiền muốn nạp 
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-lg amount-input-wrapper">
+                                <input type="number" 
+                                       id="amount" 
+                                       name="amount" 
+                                       class="form-control form-control-lg shadow-sm amount-input" 
+                                       style="border-radius: 12px 0 0 12px; border: 2px solid #ced4da; border-right: none; font-size: 1.5rem; font-weight: 500;"
+                                       placeholder="Nhập số tiền" 
+                                       value="{{ form.amount.value|default:'100000' }}" 
+                                       min="10000" 
+                                       required>
+                                <span class="input-group-text fw-bold" 
+                                      style="background: linear-gradient(135deg, #198754, #20c997); color: white; border-radius: 0 12px 12px 0; border: none; font-size: 1.2rem;">
+                                    VNĐ
+                                </span>
                             </div>
                             {% if form.amount.errors %}
                                 <div class="text-danger small mt-1">
@@ -742,7 +802,26 @@
                                     {% endfor %}
                                 </div>
                             {% endif %}
-                            <div class="form-text">Số tiền tối thiểu 10,000 VNĐ</div>
+                            <div class="form-text mt-2 d-flex align-items-center">
+                                <i class="fas fa-info-circle text-primary me-2"></i>
+                                <span>Số tiền tối thiểu <span class="fw-bold">10,000 VNĐ</span></span>
+                            </div>
+                            <div class="mt-3 p-3 rounded-3" 
+                                 style="background-color: rgba(248, 249, 250, 0.7); border-left: 4px solid #20c997;">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3 text-success">
+                                        <i class="fas fa-calculator fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted">Số tiền bạn sẽ nhận:</div>
+                                        <div class="fw-bold text-success">
+                                            <span class="amount-display" style="font-size: 1.1rem;">
+                                                {{ form.amount.value|default:'100000'|floatformat:0 }}
+                                            </span> VNĐ
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Payment Methods -->
