@@ -7,65 +7,117 @@ from django.core.paginator import Paginator
 from datetime import timedelta
 import uuid
 from django.db import transaction
+from django.utils.formats import date_format
+from decimal import Decimal
 
 from .models import Wallet, BankAccount, WalletTransaction
 from .forms import BankAccountForm, DepositForm, WithdrawForm
 from .templatetags.currency_filters import dinh_dang_tien
+from .utils import generate_qr_code, check_paid
 
 @login_required
 def wallet(request):
     # Lấy hoặc tạo ví cho người dùng
     wallet, created = Wallet.objects.get_or_create(user=request.user)
     
-    # Lấy danh sách tài khoản ngân hàng
-    bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
+    # Hiển thị thông báo về các giao dịch rút tiền đã được xử lý mà người dùng chưa xem
+    # Lấy các giao dịch rút tiền đã hoàn thành và chưa được đánh dấu là đã thông báo
+    completed_withdrawals = WalletTransaction.objects.filter(
+        user=request.user,
+        type='withdraw',
+        status='completed',
+        completed_at__isnull=False,
+    ).exclude(
+        notes__icontains='đã thông báo'
+    ).order_by('-completed_at')[:5]  # Lấy 5 giao dịch gần nhất
     
-    # Lấy giao dịch gần đây
-    transactions = WalletTransaction.objects.filter(user=request.user).order_by('-created_at')
+    # Hiển thị thông báo cho từng giao dịch
+    for withdrawal in completed_withdrawals:
+        messages.success(
+            request,
+            f'Yêu cầu rút tiền #{withdrawal.transaction_id} của bạn đã được phê duyệt! '
+            f'<br>Số tiền rút: {dinh_dang_tien(withdrawal.amount)} VNĐ'
+            f'<br>Phí giao dịch: {dinh_dang_tien(withdrawal.fee)} VNĐ'
+            f'<br>Số tiền thực nhận: {dinh_dang_tien(withdrawal.net_amount)} VNĐ'
+            f'<br>Thời gian xử lý: {timezone.localtime(withdrawal.completed_at).strftime("%H:%M %d-%m-%Y")}'
+        )
+        # Đánh dấu là đã thông báo
+        withdrawal.notes = f"{withdrawal.notes or ''} | đã thông báo"
+        withdrawal.save(update_fields=['notes'])
     
-    # Lọc giao dịch theo loại nếu có tham số trong query
-    transaction_type = request.GET.get('type')
+    # Hiển thị thông báo cho các giao dịch bị từ chối
+    rejected_withdrawals = WalletTransaction.objects.filter(
+        user=request.user,
+        type='withdraw',
+        status='failed',
+        updated_at__isnull=False,
+    ).exclude(
+        notes__icontains='đã thông báo'
+    ).order_by('-updated_at')[:5]
+    
+    for withdrawal in rejected_withdrawals:
+        messages.error(
+            request,
+            f'Yêu cầu rút tiền #{withdrawal.transaction_id} của bạn đã bị từ chối. '
+            f'<br>Số tiền rút: {dinh_dang_tien(withdrawal.amount)} VNĐ'
+            f'<br>Thời gian xử lý: {timezone.localtime(withdrawal.updated_at).strftime("%H:%M %d-%m-%Y")}'
+            f'<br>Lý do: {withdrawal.notes if "Từ chối" in withdrawal.notes else "Không đáp ứng điều kiện rút tiền"}'
+        )
+        # Đánh dấu là đã thông báo
+        withdrawal.notes = f"{withdrawal.notes or ''} | đã thông báo"
+        withdrawal.save(update_fields=['notes'])
+    
+    # Lấy các giao dịch gần đây
+    transactions = WalletTransaction.objects.filter(user=request.user).order_by('-created_at')[:5]
+    
+    # Các thống kê
+    transaction_type = request.GET.get('type', None)
+    from_date = request.GET.get('from_date', None)
+    to_date = request.GET.get('to_date', None)
+    
+    # Bộ lọc
+    filter_params = {'user': request.user}
     if transaction_type in ['deposit', 'withdraw']:
-        transactions = transactions.filter(type=transaction_type)
+        filter_params['type'] = transaction_type
     
-    # Phân trang giao dịch
-    paginator = Paginator(transactions, 10)  # 10 giao dịch mỗi trang
-    page_number = request.GET.get('page')
-    paged_transactions = paginator.get_page(page_number)
+    if from_date:
+        filter_params['created_at__gte'] = from_date
     
-    # Tính tổng nạp/rút
-    thirty_days_ago = timezone.now() - timedelta(days=30)
+    if to_date:
+        filter_params['created_at__lte'] = to_date
     
+    # Tính tổng nạp và rút
     total_deposit = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='deposit', 
+        user=request.user,
+        type='deposit',
         status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
     total_withdraw = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='withdraw', 
+        user=request.user,
+        type='withdraw',
         status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
+    # Tính tổng nạp và rút trong 30 ngày gần đây
+    thirty_days_ago = timezone.now() - timedelta(days=30)
     monthly_deposit = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='deposit', 
-        status='completed',
-        created_at__gte=thirty_days_ago
-    ).aggregate(total=Sum('amount'))['total'] or 0
+        user=request.user,
+        type='deposit',
+        created_at__gte=thirty_days_ago,
+        status='completed'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
     monthly_withdraw = WalletTransaction.objects.filter(
-        user=request.user, 
-        type='withdraw', 
-        status='completed',
-        created_at__gte=thirty_days_ago
-    ).aggregate(total=Sum('amount'))['total'] or 0
+        user=request.user,
+        type='withdraw',
+        created_at__gte=thirty_days_ago,
+        status='completed'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
     
     context = {
         'wallet': wallet,
-        'bank_accounts': bank_accounts,
-        'transactions': paged_transactions,
+        'transactions': transactions,
         'total_deposit': total_deposit,
         'total_withdraw': total_withdraw,
         'monthly_deposit': monthly_deposit,
@@ -82,7 +134,65 @@ def deposit_money(request):
     # Lấy danh sách tài khoản ngân hàng
     bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
     
-    if request.method == 'POST':
+    # Comprueba si hay un transaction_id en el formulario
+    if request.method == 'POST' and 'transaction_id' in request.POST and request.POST.get('transaction_id'):
+        transaction_id = request.POST.get('transaction_id')
+    else:
+        # Tạo transaction_id duy nhất
+        transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
+    
+    # Mặc định amount
+    default_amount = Decimal('100000')
+    
+    # Tạo URL mã QR VietQR
+    qr_code_url = generate_qr_code(
+        amount=default_amount,
+        transaction_id=transaction_id,
+        username=request.user.username
+    )
+    
+    # Kiểm tra nếu có xác nhận nạp tiền
+    verification_result = None
+    if 'verify_deposit' in request.POST:
+        # Lấy thông tin giao dịch cần xác nhận
+        verify_transaction_id = request.POST.get('verify_transaction_id', transaction_id)
+        verify_amount = request.POST.get('verify_amount')
+        
+        # Log para depuración
+        print(f"Verificando depósito: ID={verify_transaction_id}, Monto={verify_amount}")
+        
+        if verify_transaction_id and verify_amount:
+            # Kiểm tra thông tin giao dịch
+            verification_result = check_paid(
+                transaction_id=verify_transaction_id,
+                amount=Decimal(verify_amount)
+            )
+            
+            # Nếu xác nhận thành công
+            if verification_result['success']:
+                # Tạo transaction_obj trong DB
+                with transaction.atomic():
+                    # Tạo giao dịch nạp tiền
+                    transaction_obj = WalletTransaction.objects.create(
+                        user=request.user,
+                        wallet=wallet,
+                        type='deposit',
+                        amount=Decimal(verify_amount),
+                        fee=0,  # Miễn phí nạp tiền
+                        net_amount=Decimal(verify_amount),
+                        status='completed',  # Trạng thái hoàn thành
+                        payment_method='bank_transfer',
+                        transaction_id=verify_transaction_id,
+                        notes=f"Nạp tiền xác nhận thủ công: {verification_result['message']}"
+                    )
+                
+                messages.success(request, verification_result['message'])
+                return redirect('wallet')
+            else:
+                messages.error(request, verification_result['message'])
+    
+    # Xử lý form deposit bình thường
+    if request.method == 'POST' and 'confirm_transfer' in request.POST:
         print("POST request received for deposit_money")
         print("POST data:", request.POST)
         
@@ -94,9 +204,6 @@ def deposit_money(request):
             payment_method = form.cleaned_data['payment_method']
             bank_account = form.cleaned_data.get('bank_account')
             agree_terms = form.cleaned_data['agree_terms']
-            
-            # Tạo transaction_id duy nhất để tránh giao dịch trùng lặp
-            transaction_id = f"DEP{uuid.uuid4().hex[:8].upper()}"
             
             # Kiểm tra xem giao dịch có trùng lặp không (trong vòng 5 phút gần đây)
             five_minutes_ago = timezone.now() - timedelta(minutes=5)
@@ -144,41 +251,119 @@ def deposit_money(request):
                     messages.error(request, 'Vui lòng chọn hoặc thêm tài khoản ngân hàng để tiếp tục nạp tiền.')
                     return redirect('deposit_money')
             
-            # Sử dụng transaction.atomic để đảm bảo tính toàn vẹn dữ liệu
-            with transaction.atomic():
-                # Tạo giao dịch nạp tiền
-                transaction_obj = WalletTransaction.objects.create(
-                    user=request.user,
-                    wallet=wallet,
-                    type='deposit',
+            # Chuyển sang trang xác nhận nạp tiền
+            context = {
+                'wallet': wallet,
+                'amount': amount,
+                'transaction_id': transaction_id,
+                'payment_method': payment_method,
+                'qr_code_url': generate_qr_code(
                     amount=amount,
-                    fee=0,  # Miễn phí nạp tiền
-                    net_amount=amount,
-                    status='completed',  # Trạng thái hoàn thành thay vì pending
-                    bank_account=bank_account,
-                    payment_method=payment_method,
                     transaction_id=transaction_id,
-                    notes=f"Nạp tiền qua {dict(WalletTransaction.PAYMENT_METHOD_CHOICES)[payment_method]}"
-                )
+                    username=request.user.username
+                ),
+                'bank_account': bank_account,
+                'verify_mode': True
+            }
             
-            messages.success(request, f'Nạp tiền thành công! Số dư của bạn đã được cập nhật: {dinh_dang_tien(wallet.balance)} VNĐ với thông tin Balance Information<br>Số dư khả dụng: {dinh_dang_tien(wallet.balance)} VNĐ')
-            return redirect('wallet')
+            return render(request, 'portfolio/deposit.html', context)
         else:
             print("Form is invalid")
             print("Form errors:", form.errors)
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{error}")
+            
+            # Nếu có amount trong form không hợp lệ, tạo lại mã QR với amount từ form
+            amount = request.POST.get('amount', default_amount)
+            qr_code_url = generate_qr_code(
+                amount=amount,
+                transaction_id=transaction_id,
+                username=request.user.username
+            )
     else:
         form = DepositForm(request.user)
     
     context = {
         'wallet': wallet,
         'bank_accounts': bank_accounts,
-        'form': form
+        'form': form,
+        'qr_code_url': qr_code_url,
+        'transaction_id': transaction_id,
+        'verification_result': verification_result,
+        'verify_mode': False
     }
     
     return render(request, 'portfolio/deposit.html', context)
+
+@login_required
+def verify_deposit(request, transaction_id=None):
+    """View để kiểm tra giao dịch nạp tiền cuối cùng"""
+    if request.method != 'POST':
+        return redirect('deposit_money')
+        
+    # Lấy thông tin từ form
+    # Prioriza obtener el transaction_id del parámetro, luego del formulario
+    if not transaction_id:
+        # Usamos el campo oculto transaction_id si está presente
+        transaction_id = request.POST.get('transaction_id')
+        # Como fallback, usamos verify_transaction_id
+        if not transaction_id:
+            transaction_id = request.POST.get('verify_transaction_id')
+    
+    verify_transaction_id = transaction_id  # Aseguramos que se use el mismo ID
+    verify_amount = request.POST.get('verify_amount')
+    
+    if not verify_transaction_id or not verify_amount:
+        messages.error(request, "Vui lòng cung cấp đầy đủ mã giao dịch và số tiền để xác nhận nạp tiền")
+        return redirect('deposit_money')
+    
+    # Kiểm tra thông tin giao dịch
+    verification_result = check_paid(
+        transaction_id=verify_transaction_id,
+        amount=Decimal(verify_amount)
+    )
+    
+    # Log para depuración
+    print(f"Verificando transacción: ID={verify_transaction_id}, Monto={verify_amount}")
+    
+    # Lấy hoặc tạo ví cho người dùng
+    wallet, created = Wallet.objects.get_or_create(user=request.user)
+    
+    # Nếu xác nhận thành công
+    if verification_result['success']:
+        # Kiểm tra xem giao dịch này đã được xử lý chưa
+        if WalletTransaction.objects.filter(
+            user=request.user, 
+            transaction_id=verify_transaction_id, 
+            status='completed'
+        ).exists():
+            messages.warning(request, f"Giao dịch với mã {verify_transaction_id} đã được xử lý trước đó.")
+            return redirect('wallet')
+            
+        # Tạo transaction_obj trong DB
+        with transaction.atomic():
+            # Tạo giao dịch nạp tiền
+            transaction_obj = WalletTransaction.objects.create(
+                user=request.user,
+                wallet=wallet,
+                type='deposit',
+                amount=Decimal(verify_amount),
+                fee=0,  # Miễn phí nạp tiền
+                net_amount=Decimal(verify_amount),
+                status='completed',  # Trạng thái hoàn thành
+                payment_method='bank_transfer',
+                transaction_id=verify_transaction_id,
+                notes=f"Nạp tiền xác nhận thủ công: {verification_result['message']}"
+            )
+        
+        messages.success(request, verification_result['message'])
+        return redirect('wallet')
+    else:
+        messages.error(request, verification_result['message'])
+        
+    # Quay lại trang nạp tiền với kết quả xác nhận
+    return redirect('deposit_money')
 
 @login_required
 def withdraw_money(request):
@@ -188,6 +373,12 @@ def withdraw_money(request):
     # Lấy danh sách tài khoản ngân hàng
     bank_accounts = BankAccount.objects.filter(user=request.user).order_by('-is_default', '-created_at')
     
+    # Số dư tối thiểu để rút tiền (50,000 VND)
+    MINIMUM_BALANCE = Decimal('50000')
+    
+    # Phí cố định cho mỗi giao dịch rút tiền (10,000 VND)
+    WITHDRAWAL_FEE = Decimal('10000')
+    
     if request.method == 'POST':
         form = WithdrawForm(request.user, request.POST)
         if form.is_valid():
@@ -196,9 +387,23 @@ def withdraw_money(request):
             bank_account = form.cleaned_data.get('bank_account')
             withdraw_note = form.cleaned_data.get('notes', '')
             
-            # Kiểm tra số dư
+            # Tính phí rút tiền và số tiền thực nhận
+            fee = WITHDRAWAL_FEE
+            net_amount = amount - fee
+            
+            # Kiểm tra số tiền rút hợp lệ (sau khi trừ phí phải > 0)
+            if net_amount <= 0:
+                messages.error(request, f'Số tiền rút phải lớn hơn phí giao dịch ({dinh_dang_tien(WITHDRAWAL_FEE)} VNĐ).')
+                return redirect('withdraw_money')
+            
+            # Kiểm tra số dư - phải đảm bảo đủ rút và đảm bảo số dư còn lại trên mức tối thiểu
             if amount > wallet.balance:
                 messages.error(request, 'Số dư của bạn không đủ để thực hiện giao dịch này.')
+                return redirect('withdraw_money')
+            
+            # Kiểm tra số dư còn lại sau khi rút phải lớn hơn hoặc bằng số dư tối thiểu
+            if (wallet.balance - amount) < MINIMUM_BALANCE:
+                messages.error(request, f'Số dư còn lại sau khi rút phải lớn hơn hoặc bằng {dinh_dang_tien(MINIMUM_BALANCE)} VNĐ.')
                 return redirect('withdraw_money')
             
             # Nếu không chọn tài khoản nào
@@ -233,10 +438,6 @@ def withdraw_money(request):
                     messages.error(request, 'Vui lòng chọn hoặc thêm tài khoản ngân hàng để tiếp tục rút tiền.')
                     return redirect('withdraw_money')
             
-            # Không tính phí rút tiền
-            fee = 0
-            net_amount = amount
-            
             # Tạo transaction_id duy nhất để tránh giao dịch trùng lặp
             transaction_id = f"WIT{uuid.uuid4().hex[:8].upper()}"
             
@@ -255,7 +456,7 @@ def withdraw_money(request):
             
             # Sử dụng transaction.atomic để đảm bảo tính toàn vẹn dữ liệu
             with transaction.atomic():
-                # Tạo giao dịch rút tiền
+                # Tạo giao dịch rút tiền với trạng thái 'pending' - chờ admin phê duyệt
                 transaction_obj = WalletTransaction.objects.create(
                     user=request.user,
                     wallet=wallet,
@@ -263,7 +464,7 @@ def withdraw_money(request):
                     amount=amount,
                     fee=fee,
                     net_amount=net_amount,
-                    status='completed',  # Trạng thái hoàn thành thay vì pending
+                    status='pending', # Thay đổi trạng thái thành 'pending' thay vì 'completed'
                     bank_account=bank_account,
                     payment_method='bank_transfer',
                     transaction_id=transaction_id,
@@ -272,10 +473,12 @@ def withdraw_money(request):
             
             messages.success(
                 request, 
-                f'Rút tiền thành công! '
+                f'Yêu cầu rút tiền đã được gửi đi và đang chờ xét duyệt! '
                 f'<br>Số tiền rút: {dinh_dang_tien(amount)} VNĐ'
+                f'<br>Phí giao dịch: {dinh_dang_tien(fee)} VNĐ'
                 f'<br>Số tiền thực nhận: {dinh_dang_tien(net_amount)} VNĐ'
-                f'<br>Số dư còn lại: {dinh_dang_tien(wallet.balance)} VNĐ'
+                f'<br>Số dư hiện tại: {dinh_dang_tien(wallet.balance)} VNĐ'
+                f'<br>Trạng thái: Đang chờ xử lý'
             )
             return redirect('wallet')
         else:
@@ -288,7 +491,9 @@ def withdraw_money(request):
     context = {
         'wallet': wallet,
         'bank_accounts': bank_accounts,
-        'form': form
+        'form': form,
+        'minimum_balance': MINIMUM_BALANCE,
+        'withdrawal_fee': WITHDRAWAL_FEE
     }
     
     return render(request, 'portfolio/withdraw.html', context)

@@ -12,11 +12,14 @@ services:
       DB_HOST         : ${DATABASE_HOST}
       DB_PORT         : ${DATABASE_PORT}
     volumes:
-      - .:/app
-      - static_volume:/app/static
+      - ./src:/app/src
+      - ./data:/app/data
+      - static_volume:/app/src/staticfiles
+      - media_volume:/app/src/media
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
   db:
     image: postgres:15
@@ -33,8 +36,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-
+    restart: unless-stopped
+    
 volumes:
   postgres_data:
   static_volume:
-
+  media_volume:

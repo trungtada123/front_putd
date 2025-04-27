@@ -23,13 +23,13 @@ rm -rf /var/lib/apt/lists/*
 COPY . .
 
 # 6. Làm cho entrypoint.sh có quyền thực thi
-# RUN chmod +x ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 # 7. Expose port
-EXPOSE 8000
+# EXPOSE 8000
 
 # 8. Sử dụng entrypoint.sh
-# ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./entrypoint.sh"]
 
 # 9. Chạy server
 CMD ["gunicorn", "--chdir", "/app/src", "config.wsgi:application", "--bind", "0.0.0.0:8000"]

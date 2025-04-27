@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo "Hello................"
-
 set -e
 
 echo "Load environment variables"
@@ -29,10 +27,11 @@ echo "👤 Tạo tài khoản admin"
 python src/manage.py shell -c "
 from django.contrib.auth import get_user_model;
 User = get_user_model();
-if not User.objects.filter(username='admin').exists():
-    User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-else:
-    print('Admin đã tồn tại')
+if User.objects.filter(username='admin').exists():
+    User.objects.filter(username='admin').delete()
+    print('Đã xóa tài khoản admin cũ')
+User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+print('✅ Đã tạo tài khoản admin mới')
 "
 
 
@@ -46,22 +45,6 @@ chmod -R 755 /app/static
 # Collect static files with verbose output
 echo "📂 Collecting static files..."
 python src/manage.py collectstatic --noinput -v 2 || { echo "❌ Lỗi collect static files"; exit 1; }
-
-# Verify static files existence
-echo "🔍 Verifying static files..."
-if [ -d "/app/static" ]; then
-  echo "✅ Static directory exists"
-  ls -la /app/static
-  if [ -d "/app/static/portfolio" ]; then
-    echo "✅ Portfolio directory exists"
-    ls -la /app/static/portfolio
-  else
-    echo "❌ Portfolio directory missing"
-  fi
-else
-  echo "❌ Static directory missing"
-fi
-
 
 # Khởi động server bằng lệnh trong Dockerfile
 echo "Start server..."

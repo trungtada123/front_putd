@@ -5,3 +5,33 @@ Dockerfile
 venv/
 __pycache__/
 *.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env.local
+env/
+venv/
+ENV/
+*.sqlite3
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Media
+src/media/*
+!src/media/.gitkeep
+
+# Static
+src/staticfiles/*
+!src/staticfiles/.gitkeep
+
+# Misc
+.DS_Store
+node_modules/ 
