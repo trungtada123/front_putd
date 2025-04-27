@@ -46,6 +46,22 @@ chmod -R 755 /app/static
 echo "📂 Collecting static files..."
 python src/manage.py collectstatic --noinput -v 2 || { echo "❌ Lỗi collect static files"; exit 1; }
 
+# Verify static files existence
+echo "🔍 Verifying static files..."
+if [ -d "/app/static" ]; then
+  echo "✅ Static directory exists"
+  ls -la /app/static
+  if [ -d "/app/static/portfolio" ]; then
+    echo "✅ Portfolio directory exists"
+    ls -la /app/static/portfolio
+  else
+    echo "❌ Portfolio directory missing"
+  fi
+else
+  echo "❌ Static directory missing"
+fi
+
+
 # Khởi động server bằng lệnh trong Dockerfile
 echo "Start server..."
 exec "$@"

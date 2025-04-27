@@ -1,26 +1,18 @@
 import os
 from pathlib import Path
-import environ
+from decouple import config
 
-# Khởi tạo environ
-env = environ.Env(
-    DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, ['127.0.0.1', 'localhost']),
-)
 
-# Đọc file .env nếu tồn tại
-# .env file nằm ở thư mục gốc của dự án
-env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env')
-if os.path.isfile(env_file):
-    env.read_env(env_file)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-default-key-for-development')
 
-DEBUG = env('DEBUG')
+SECRET_KEY = config("SECRET_KEY")
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+DEBUG = config('DEBUG')
+
+ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
