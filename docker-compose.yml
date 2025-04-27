@@ -1,27 +1,40 @@
-version: "3.9"
+version: '3.9'
 
 services:
   web:
-    volumes:
-      - ./src:/app/src
     build: .
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      - 8000:8000
+    environment:
+      DB_NAME         : ${DATABASE_NAME}
+      DB_USER         : ${DATABASE_USER}
+      DB_PASSWORD     : ${DATABASE_PASSWORD}
+      DB_HOST         : ${DATABASE_HOST}
+      DB_PORT         : ${DATABASE_PORT}
+    volumes:
+      - .:/app
+      - static_volume:/app/static
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: db_for_pm
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB         : ${DATABASE_NAME}
+      POSTGRES_USER       : ${DATABASE_USER}
+      POSTGRES_PASSWORD   : ${DATABASE_PASSWORD}
     ports:
-      - "5432:5432"
+      - 5432:5432
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   postgres_data:
+  static_volume:
+
