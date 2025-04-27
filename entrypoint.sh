@@ -65,3 +65,8 @@ fi
 # Khởi động server bằng lệnh trong Dockerfile
 echo "Start server..."
 exec "$@"
+
+
+
+# converting file entrypoint.sh to Unix format
+# dos2unix entrypoint.sh
